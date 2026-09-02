@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>xstek Medical Transcription - Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: #f8f9fa;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, #1a237e 0%, #0d47a1 100%);
+            color: white;
+            border-radius: 10px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .header .meta {
+            margin-top: 15px;
+            font-size: 0.9em;
+            opacity: 0.7;
+        }
+        
+        h2 {
+            color: #1a237e;
+            border-bottom: 3px solid #0d47a1;
+            padding-bottom: 10px;
+            margin: 40px 0 20px 0;
+            font-size: 1.8em;
+        }
+        
+        h3 {
+            color: #1565c0;
+            margin: 30px 0 15px 0;
+            font-size: 1.4em;
+        }
+        
+        h4 {
+            color: #1976d2;
+            margin: 20px 0 10px 0;
+            font-size: 1.1em;
+        }
+        
+        p {
+            margin-bottom: 15px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .card.info {
+            border-left: 4px solid #2196f3;
+            background: #e3f2fd;
+        }
+        
+        .card.success {
+            border-left: 4px solid #4caf50;
+            background: #e8f5e9;
+        }
+        
+        .card.warning {
+            border-left: 4px solid #ff9800;
+            background: #fff3e0;
+        }
+        
+        .card.error {
+            border-left: 4px solid #f44336;
+            background: #ffebee;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        th {
+            background: #1a237e;
+            color: white;
+            font-weight: 600;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        code {
+            background: #e8eaf6;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+        }
+        
+        pre {
+            background: #263238;
+            color: #80cbc4;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        
+        pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+        
+        ul, ol {
+            margin: 15px 0 15px 25px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 500;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .badge.primary { background: #1a237e; color: white; }
+        .badge.secondary { background: #757575; color: white; }
+        .badge.success { background: #4caf50; color: white; }
+        .badge.warning { background: #ff9800; color: white; }
+        .badge.info { background: #2196f3; color: white; }
+        .badge.error { background: #f44336; color: white; }
+        
+        .two-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .highlight-box {
+            background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%);
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .conversation {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .conversation-line {
+            margin: 10px 0;
+            padding: 10px 15px;
+            border-radius: 8px;
+        }
+        
+        .conversation-line.doctor {
+            background: #e3f2fd;
+            margin-left: 0;
+            margin-right: 40px;
+        }
+        
+        .conversation-line.patient {
+            background: #f3e5f5;
+            margin-left: 40px;
+            margin-right: 0;
+        }
+        
+        .speaker {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        
+        .speaker.doctor { color: #1565c0; }
+        .speaker.patient { color: #7b1fa2; }
+        
+        .toc {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 20px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .toc h3 {
+            margin-top: 0;
+            color: #1a237e;
+        }
+        
+        .toc ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .toc li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .toc a {
+            color: #1565c0;
+            text-decoration: none;
+        }
+        
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        
+        .page-break {
+            page-break-before: always;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                max-width: 100%;
+            }
+            
+            .header {
+                background: #1a237e;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            .card {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+            
+            table {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏥 xstek Medical Transcription</h1>
+        <div class="subtitle">Complete Documentation Guide</div>
+        <div class="meta">Version 1.0 | January 2026</div>
+    </div>
+    
+    <div class="toc">
+        <h3>📑 Table of Contents</h3>
+        <ul>
+            <li><a href="#overview">1. Overview</a></li>
+            <li><a href="#modes">2. Understanding Transcription Modes</a></li>
+            <li><a href="#soap">3. SOAP Note Components</a></li>
+            <li><a href="#glossary">4. Glossary of Terms</a></li>
+            <li><a href="#features">5. Features</a></li>
+            <li><a href="#best-practices">6. Best Practices</a></li>
+            <li><a href="#troubleshooting">7. Troubleshooting</a></li>
+            <li><a href="#samples">8. Sample Conversations</a></li>
+            <li><a href="#architecture">9. Technical Architecture</a></li>
+        </ul>
+    </div>
+
+    <h2 id="overview">1. Overview</h2>
+    
+    <p><strong>xstek Medical Transcription</strong> is an AI-powered platform that transforms clinical conversations into accurate, structured documentation. The platform uses advanced speech recognition technology specifically trained for healthcare terminology.</p>
+    
+    <div class="card info">
+        <h4>Three Ways to Transcribe:</h4>
+        <table>
+            <tr>
+                <th>Method</th>
+                <th>Description</th>
+                <th>Use Case</th>
+            </tr>
+            <tr>
+                <td><span class="badge primary">File Transcription</span></td>
+                <td>Upload pre-recorded audio files</td>
+                <td>Recorded consultations, meetings</td>
+            </tr>
+            <tr>
+                <td><span class="badge secondary">Ambient AI</span></td>
+                <td>Real-time conversation capture with fact extraction</td>
+                <td>Live consultations, clinical encounters</td>
+            </tr>
+            <tr>
+                <td><span class="badge success">Dictation</span></td>
+                <td>Voice-controlled note-taking with templates</td>
+                <td>Quick notes, template filling</td>
+            </tr>
+        </table>
+    </div>
+
+    <h2 id="modes" class="page-break">2. Understanding Transcription Modes</h2>
+    
+    <p>There are different ways to convert speech to text in this platform. Here's what each term means:</p>
+    
+    <div class="card">
+        <h3>Transcribe (Upload & Process)</h3>
+        <p>Upload a pre-recorded audio file for batch processing. The file is sent to the server, processed, and returns the complete text.</p>
+        <div class="highlight-box">
+            <strong>Example:</strong> Upload "consultation.mp3" → Wait 10 seconds → Get full text<br>
+            <code>API: POST /api/transcribe/upload</code>
+        </div>
+        <p><strong>When to Use:</strong> Recorded consultations, Meeting recordings, Pre-recorded dictations</p>
+    </div>
+    
+    <div class="card">
+        <h3>Stream (Real-Time Audio)</h3>
+        <p>Send audio in real-time via WebSocket. Text appears as you speak. Used by Ambient AI.</p>
+        <div class="highlight-box">
+            <strong>Example:</strong> Speak → See words appear instantly → Continue talking<br>
+            <code>API: WebSocket /api/ambient/ws</code>
+        </div>
+        <p><strong>When to Use:</strong> Live consultations, Real-time note-taking, Clinical fact extraction</p>
+    </div>
+    
+    <div class="card">
+        <h3>Dictation (Stateless Voice-to-Text)</h3>
+        <p>Real-time transcription without storing session state. Supports voice commands for editing and navigation.</p>
+        <div class="highlight-box">
+            <strong>Example:</strong> "Patient presents with cough period new paragraph" → Formatted text<br>
+            <code>API: WebSocket /api/dictation/ws</code>
+        </div>
+        <p><strong>When to Use:</strong> Quick notes, Template filling, Voice commands</p>
+    </div>
+    
+    <div class="card">
+        <h3>Transcript (The Output)</h3>
+        <p>The resulting text document from any transcription method. Contains the words spoken in the audio.</p>
+        <div class="highlight-box">
+            <strong>Example:</strong> Input: Audio → Output: "Patient reports headache for 2 weeks..."
+        </div>
+        <p><strong>When to Use:</strong> Copy to EHR, Generate documents, Review/edit</p>
+    </div>
+    
+    <div class="card info">
+        <h4>Key Difference Summary</h4>
+        <table>
+            <tr><th>Term</th><th>What it is</th></tr>
+            <tr><td><strong>Transcribe</strong></td><td>The action (upload file)</td></tr>
+            <tr><td><strong>Stream</strong></td><td>The method (real-time)</td></tr>
+            <tr><td><strong>Dictation</strong></td><td>The mode (voice commands)</td></tr>
+            <tr><td><strong>Transcript</strong></td><td>The result (the text)</td></tr>
+        </table>
+    </div>
+
+    <h2 id="soap" class="page-break">3. SOAP Note Components</h2>
+    
+    <p>For accurate SOAP notes, the AI needs to extract specific clinical data. Here's what each component means:</p>
+    
+    <div class="two-columns">
+        <div class="card">
+            <h3>💚 Vital Signs</h3>
+            <p><em>Objective measurements</em></p>
+            <p>Measurable physiological parameters that indicate a patient's basic body functions.</p>
+            <ul>
+                <li><strong>Blood Pressure</strong> - e.g., "140/90 mmHg"</li>
+                <li><strong>Heart Rate</strong> - e.g., "88 beats per minute"</li>
+                <li><strong>Temperature</strong> - e.g., "37.5°C"</li>
+                <li><strong>Respiratory Rate</strong> - e.g., "16 breaths per minute"</li>
+                <li><strong>Oxygen Saturation</strong> - e.g., "98% on room air"</li>
+            </ul>
+            <div class="card success">
+                <strong>Say:</strong> "Blood pressure is 140 over 90, heart rate 88, temperature 37.5"
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>💊 Medications</h3>
+            <p><em>Current & prescribed drugs</em></p>
+            <p>Drugs the patient is currently taking or being prescribed, including dosage and frequency.</p>
+            <ul>
+                <li><strong>Drug Name</strong> - Generic or brand name</li>
+                <li><strong>Dose</strong> - e.g., "500 milligrams"</li>
+                <li><strong>Frequency</strong> - e.g., "twice daily"</li>
+                <li><strong>Route</strong> - oral, IV, topical, etc.</li>
+                <li><strong>Duration</strong> - "for 7 days"</li>
+            </ul>
+            <div class="card success">
+                <strong>Say:</strong> "Patient takes Metformin 500 milligrams twice daily"
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>⚠️ Allergies</h3>
+            <p><em>Adverse reactions</em></p>
+            <p>Substances that cause allergic reactions in the patient, including the type of reaction.</p>
+            <ul>
+                <li><strong>Allergen</strong> - Drug, food, or environmental</li>
+                <li><strong>Reaction Type</strong> - Rash, anaphylaxis, nausea</li>
+                <li><strong>Severity</strong> - Mild, moderate, severe</li>
+                <li><strong>NKDA</strong> - "No known drug allergies"</li>
+            </ul>
+            <div class="card success">
+                <strong>Say:</strong> "Patient is allergic to Penicillin which causes a skin rash"
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>🩺 Diagnoses</h3>
+            <p><em>Clinical conclusions</em></p>
+            <p>Medical conditions identified based on symptoms, history, and examination findings.</p>
+            <ul>
+                <li><strong>Primary Diagnosis</strong> - Main condition</li>
+                <li><strong>Secondary Diagnoses</strong> - Related conditions</li>
+                <li><strong>Differential Diagnoses</strong> - Possibilities to rule out</li>
+                <li><strong>Chronic Conditions</strong> - Existing history</li>
+            </ul>
+            <div class="card success">
+                <strong>Say:</strong> "Assessment shows tension headache. Patient has Type 2 Diabetes"
+            </div>
+        </div>
+    </div>
+    
+    <div class="card warning">
+        <strong>💡 Pro Tip:</strong> For complete SOAP notes, always mention all four components during the consultation. The AI extracts what it hears — if you don't say it, it won't appear in the note.
+    </div>
+
+    <h2 id="glossary" class="page-break">4. Glossary of Terms</h2>
+    
+    <div class="card">
+        <h3>Clinical Facts</h3>
+        <span class="badge primary">Core Concept</span>
+        <p>Structured pieces of clinical information extracted from conversations, such as medications, allergies, vital signs, diagnoses, symptoms, and medical history. Facts are validated by AI before being used for documentation.</p>
+        <div class="highlight-box">
+            <strong>Example:</strong> From "I take Metformin 500mg twice daily" → Medication fact: "Metformin 500mg BID"
+        </div>
+    </div>
+    
+    <div class="card">
+        <h3>FactsR™</h3>
+        <span class="badge secondary">Technology</span>
+        <p>The AI engine that powers clinical fact extraction. FactsR™ uses a recursive fact-first reasoning loop to identify, validate, and structure clinical knowledge in real-time. It processes audio approximately every 60 seconds.</p>
+        <div class="highlight-box">
+            <strong>Flow:</strong> Listens to conversation → Identifies clinical entities → Validates accuracy → Outputs structured facts
+        </div>
+    </div>
+    
+    <div class="card">
+        <h3>Ambient AI</h3>
+        <span class="badge success">Feature</span>
+        <p>A real-time AI assistant that "listens" to doctor-patient conversations, transcribes speech, extracts clinical facts, and generates documentation automatically. No manual note-taking required during the encounter.</p>
+        <div class="highlight-box">
+            <strong>Example:</strong> Start recording → Have conversation → Stop → Get SOAP note automatically
+        </div>
+    </div>
+    
+    <div class="card">
+        <h3>SOAP Note</h3>
+        <span class="badge warning">Document Type</span>
+        <p><strong>S</strong>ubjective, <strong>O</strong>bjective, <strong>A</strong>ssessment, <strong>P</strong>lan - A standardized format for medical documentation.</p>
+        <table>
+            <tr><th>Section</th><th>Description</th></tr>
+            <tr><td>Subjective</td><td>Patient's symptoms, complaints, history</td></tr>
+            <tr><td>Objective</td><td>Exam findings, vital signs, test results</td></tr>
+            <tr><td>Assessment</td><td>Diagnosis, clinical impression</td></tr>
+            <tr><td>Plan</td><td>Treatment, medications, follow-up</td></tr>
+        </table>
+    </div>
+    
+    <div class="card">
+        <h3>Speaker Diarization</h3>
+        <span class="badge info">Technology</span>
+        <p>The process of identifying and separating different speakers in an audio recording. Allows the system to distinguish between doctor and patient voices.</p>
+        <div class="highlight-box">
+            <strong>Example:</strong> Doctor: "What brings you in?" → Speaker 0 | Patient: "Headache" → Speaker 1
+        </div>
+    </div>
+    
+    <div class="card">
+        <h3>Voice Commands</h3>
+        <span class="badge success">Feature</span>
+        <p>Spoken instructions that control the application instead of being transcribed. Used for navigation, editing, and template insertion.</p>
+        <table>
+            <tr><th>Command</th><th>Action</th></tr>
+            <tr><td>"Insert GP consultation template"</td><td>Loads structured note template</td></tr>
+            <tr><td>"Go to subjective section"</td><td>Navigate to Subjective</td></tr>
+            <tr><td>"Go to objective section"</td><td>Navigate to Objective</td></tr>
+            <tr><td>"Go to assessment section"</td><td>Navigate to Assessment</td></tr>
+            <tr><td>"Go to plan section"</td><td>Navigate to Plan</td></tr>
+            <tr><td>"New paragraph"</td><td>Insert paragraph break</td></tr>
+            <tr><td>"Undo"</td><td>Undo last action</td></tr>
+        </table>
+    </div>
+
+    <h2 id="features" class="page-break">5. Features</h2>
+    
+    <div class="card">
+        <h3>📁 File Transcription (Async)</h3>
+        <p>Upload pre-recorded audio files for batch processing. Ideal for transcribing recorded consultations, meetings, or dictated notes.</p>
+        
+        <h4>Supported Formats:</h4>
+        <p>
+            <span class="badge info">WAV</span>
+            <span class="badge info">MP3</span>
+            <span class="badge info">M4A</span>
+            <span class="badge info">FLAC</span>
+            <span class="badge info">OGG</span>
+            <span class="badge info">WebM</span>
+        </p>
+        
+        <h4>Capabilities:</h4>
+        <ul>
+            <li>Speaker diarization (identify different speakers)</li>
+            <li>Multi-language detection</li>
+            <li>Timestamp generation</li>
+            <li>Document generation</li>
+        </ul>
+    </div>
+    
+    <div class="card">
+        <h3>🎙️ Ambient AI (Real-Time)</h3>
+        <p>Capture live conversations between clinicians and patients. The AI extracts clinical facts in real-time and automatically generates documentation.</p>
+        
+        <h4>How it Works:</h4>
+        <ol>
+            <li>Start recording → Audio streams to AI</li>
+            <li>Real-time transcription appears as you speak</li>
+            <li>Clinical facts (medications, vitals, allergies) are extracted</li>
+            <li>Stop recording → SOAP note generated automatically</li>
+        </ol>
+        
+        <h4>What Gets Extracted:</h4>
+        <p>
+            <span class="badge primary">Medications</span>
+            <span class="badge secondary">Allergies</span>
+            <span class="badge success">Vital Signs</span>
+            <span class="badge warning">Diagnoses</span>
+            <span class="badge info">Symptoms</span>
+            <span class="badge error">Medical History</span>
+        </p>
+    </div>
+    
+    <div class="card">
+        <h3>🎤 Dictation (Voice-Controlled)</h3>
+        <p>Stateless real-time speech-to-text with automatic punctuation, number formatting, and voice commands for hands-free note creation.</p>
+        
+        <h4>NHS Templates:</h4>
+        <ul>
+            <li>GP Consultation</li>
+            <li>Clinical Note</li>
+            <li>Discharge Summary</li>
+            <li>A&E Triage</li>
+            <li>Progress Note</li>
+        </ul>
+        
+        <h4>Auto Formatting:</h4>
+        <ul>
+            <li>Automatic punctuation</li>
+            <li>Numbers as digits</li>
+            <li>Date/time formatting</li>
+            <li>Medical abbreviations</li>
+        </ul>
+    </div>
+
+    <h2 id="best-practices" class="page-break">6. Best Practices</h2>
+    
+    <div class="two-columns">
+        <div class="card success">
+            <h3>✅ DO</h3>
+            <ul>
+                <li>Use a quality external microphone</li>
+                <li>Speak clearly at moderate pace</li>
+                <li>Mention specific numbers: <em>"Blood pressure 140 over 90"</em></li>
+                <li>State medication doses: <em>"Metformin 500 milligrams twice daily"</em></li>
+                <li>Record for at least 2 minutes for best fact extraction</li>
+                <li>Wait 2-3 seconds before stopping recording</li>
+                <li>Use a quiet environment</li>
+            </ul>
+        </div>
+        
+        <div class="card error">
+            <h3>❌ DON'T</h3>
+            <ul>
+                <li>Use vague terms: <em>"BP is normal"</em> (say the numbers instead)</li>
+                <li>Talk over each other</li>
+                <li>Stop recording immediately after speaking</li>
+                <li>Record in noisy environments</li>
+                <li>Use abbreviations verbally: say "blood pressure" not "B-P"</li>
+                <li>Rush through clinical information</li>
+                <li>Expect facts from very short sessions (&lt;1 min)</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="card info">
+        <h4>For Complete SOAP Notes, Always Mention:</h4>
+        <table>
+            <tr><th>Component</th><th>Example</th></tr>
+            <tr><td>Vital Signs</td><td>"Blood pressure 140 over 90, heart rate 88"</td></tr>
+            <tr><td>Medications</td><td>"Metformin 500 milligrams twice daily"</td></tr>
+            <tr><td>Allergies</td><td>"Allergic to Penicillin, causes rash"</td></tr>
+            <tr><td>Diagnoses</td><td>"Assessment: tension headache"</td></tr>
+        </table>
+    </div>
+
+    <h2 id="troubleshooting">7. Troubleshooting</h2>
+    
+    <table>
+        <tr>
+            <th>Issue</th>
+            <th>Cause</th>
+            <th>Solution</th>
+        </tr>
+        <tr>
+            <td>No clinical facts appearing</td>
+            <td>Recording too short or no clinical content</td>
+            <td>Record 2+ minutes; mention medications, vitals, diagnoses explicitly</td>
+        </tr>
+        <tr>
+            <td>Empty Objective section</td>
+            <td>No vital signs or exam findings mentioned</td>
+            <td>Say "Blood pressure 140 over 90, heart rate 88" explicitly</td>
+        </tr>
+        <tr>
+            <td>Medication name misheard</td>
+            <td>Speech recognition limitation</td>
+            <td>Speak medication names slowly; spell if needed</td>
+        </tr>
+        <tr>
+            <td>Speaker labels wrong</td>
+            <td>Single microphone limitation</td>
+            <td>Use separate microphones for doctor/patient</td>
+        </tr>
+        <tr>
+            <td>Voice commands not working</td>
+            <td>Phrase not matching defined commands</td>
+            <td>Use exact phrases: "Insert GP consultation template"</td>
+        </tr>
+        <tr>
+            <td>Transcription stops</td>
+            <td>WebSocket connection lost</td>
+            <td>Stop and restart the session</td>
+        </tr>
+        <tr>
+            <td>Document generation fails</td>
+            <td>Not enough content</td>
+            <td>Ensure at least 2 minutes of clinical conversation</td>
+        </tr>
+    </table>
+
+    <h2 id="samples" class="page-break">8. Sample Conversations</h2>
+    
+    <h3>Sample 1: Basic Consultation (For Testing)</h3>
+    <p>Use this sample for testing Ambient AI:</p>
+    
+    <div class="conversation">
+        <div class="conversation-line doctor">
+            <span class="speaker doctor">Doctor:</span> "Good morning. What brings you in today?"
+        </div>
+        <div class="conversation-line patient">
+            <span class="speaker patient">Patient:</span> "I've been having severe headaches for the past two weeks."
+        </div>
+        <div class="conversation-line doctor">
+            <span class="speaker doctor">Doctor:</span> "Any other symptoms?"
+        </div>
+        <div class="conversation-line patient">
+            <span class="speaker patient">Patient:</span> "Yes, some nausea in the mornings and my vision gets blurry sometimes."
+        </div>
+        <div class="conversation-line doctor">
+            <span class="speaker doctor">Doctor:</span> "What's your medical history?"
+        </div>
+        <div class="conversation-line patient">
+            <span class="speaker patient">Patient:</span> "I have Type 2 Diabetes. I take Metformin 500 milligrams twice daily."
+        </div>
+        <div class="conversation-line doctor">
+            <span class="speaker doctor">Doctor:</span> "Any allergies?"
+        </div>
+        <div class="conversation-line patient">
+            <span class="speaker patient">Patient:</span> "I'm allergic to Penicillin. It causes a rash."
+        </div>
+        <div class="conversation-line doctor">
+            <span class="speaker doctor">Doctor:</span> "Let me check your vitals. Blood pressure 140 over 90, heart rate 88 beats per minute."
+        </div>
+        <div class="conversation-line doctor">
+            <span class="speaker doctor">Doctor:</span> "Based on my assessment, you have tension headaches. I'm prescribing Ibuprofen 400 milligrams as needed."
+        </div>
+    </div>
+
+    <h3>Sample 2: Dictation Demo Script</h3>
+    
+    <div class="card info">
+        <h4>Step-by-Step Instructions:</h4>
+        <ol>
+            <li><strong>Start Dictation</strong> - Click the green button</li>
+            <li><strong>Say:</strong> <code>"Insert GP consultation template"</code></li>
+            <li><strong>Dictate:</strong> "55-year-old male presents with chest pain for 3 days"</li>
+            <li><strong>Navigate:</strong> <code>"Go to objective section"</code></li>
+            <li><strong>Dictate:</strong> "Blood pressure 140 over 90, heart rate 72 regular"</li>
+            <li><strong>Navigate:</strong> <code>"Go to assessment section"</code></li>
+            <li><strong>Dictate:</strong> "Stable angina, rule out ACS"</li>
+            <li><strong>Navigate:</strong> <code>"Go to plan section"</code></li>
+            <li><strong>Dictate:</strong> "Refer to cardiology for stress test. Follow up in 2 weeks"</li>
+            <li><strong>Click "Copy Note"</strong> to get formatted output</li>
+        </ol>
+    </div>
+
+    <h2 id="architecture" class="page-break">9. Technical Architecture</h2>
+    
+    <div class="card">
+        <h3>System Components</h3>
+        <pre><code>
+┌─────────────────────────────────────────────────────────────┐
+│                        FRONTEND                             │
+│  Vue 3 + Vuetify 3 + TypeScript                            │
+│  - WebSocket Client                                         │
+│  - MediaRecorder API                                        │
+│  - Real-time UI Updates                                     │
+└────────────────────────────┬────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────┐
+│                        BACKEND                              │
+│  Go + Fiber Framework                                       │
+│  - REST API Endpoints                                       │
+│  - WebSocket Proxy                                          │
+│  - OAuth2 Authentication                                    │
+└────────────────────────────┬────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      CORTI AI ENGINE                        │
+│  FactsR™ Technology                                         │
+│  - Speech-to-Text                                           │
+│  - Clinical Fact Extraction                                 │
+│  - Document Generation                                      │
+└─────────────────────────────────────────────────────────────┘
+        </code></pre>
+    </div>
+    
+    <div class="card">
+        <h3>API Endpoints</h3>
+        <table>
+            <tr><th>Endpoint</th><th>Method</th><th>Description</th></tr>
+            <tr><td><code>/api/transcribe/upload</code></td><td>POST</td><td>Upload audio file for async transcription</td></tr>
+            <tr><td><code>/api/ambient/ws</code></td><td>WebSocket</td><td>Real-time ambient AI streaming</td></tr>
+            <tr><td><code>/api/dictation/ws</code></td><td>WebSocket</td><td>Real-time dictation streaming</td></tr>
+            <tr><td><code>/api/health</code></td><td>GET</td><td>Health check endpoint</td></tr>
+        </table>
+    </div>
+    
+    <div class="card">
+        <h3>Data Flow</h3>
+        <ol>
+            <li><strong>File Transcription:</strong> Upload Audio → Backend → Corti API → Process → Return Transcript</li>
+            <li><strong>Ambient AI:</strong> Record Audio → WebSocket → Stream to Corti → Real-time Transcript + Facts → Generate Document</li>
+            <li><strong>Dictation:</strong> Record Audio → WebSocket → Stream to Corti → Real-time Transcript → Voice Commands → Formatted Note</li>
+        </ol>
+    </div>
+
+    <div class="header" style="margin-top: 40px;">
+        <p style="font-size: 0.9em;">xstek Medical Transcription Documentation</p>
+        <p style="font-size: 0.8em; opacity: 0.7;">© 2026 xstek | All clinical examples are for demonstration purposes only.</p>
+    </div>
+
+</body>
+</html>
+
+
+

@@ -1,0 +1,47 @@
+# Qwythos-9B (Claude-Mythos-5 distill) — chat-ready 16k-context build.
+#
+# Why this exists: `ollama pull hf.co/empero-ai/Qwythos-9B-Claude-Mythos-5-1M-GGUF:Q4_K_M`
+# fails to convert the GGUF's embedded Jinja chat template, falling back to a raw
+# `TEMPLATE {{ .Prompt }}` — which silently DROPS system messages, breaking the
+# transcript grounding entirely. This Modelfile restores the model's native
+# ChatML format (with the <think> reasoning prompt) and raises the context
+# window from Ollama's 4k default to 16k.
+#
+# Build:  ollama create qwythos-16k-chat -f Modelfile
+
+FROM hf.co/empero-ai/Qwythos-9B-Claude-Mythos-5-1M-GGUF:Q4_K_M
+
+TEMPLATE """{{- if .Messages }}
+{{- if .System }}<|im_start|>system
+{{ .System }}<|im_end|>
+{{ end }}
+{{- range $i, $_ := .Messages }}
+{{- $last := eq (len (slice $.Messages $i)) 1 }}
+{{- if eq .Role "user" }}<|im_start|>user
+{{ .Content }}<|im_end|>
+{{ else if eq .Role "assistant" }}<|im_start|>assistant
+{{ .Content }}{{ if not $last }}<|im_end|>
+{{ end }}
+{{- end }}
+{{- if and $last (ne .Role "assistant") }}<|im_start|>assistant
+<think>
+{{ end }}
+{{- end }}
+{{- else }}
+{{- if .System }}<|im_start|>system
+{{ .System }}<|im_end|>
+{{ end }}{{ if .Prompt }}<|im_start|>user
+{{ .Prompt }}<|im_end|>
+{{ end }}<|im_start|>assistant
+<think>
+{{ end }}{{ .Response }}"""
+
+# 1-5 minute consultations + prompts fit comfortably in 16k; raise if batching.
+PARAMETER num_ctx 16384
+
+# Model-card guidance: moderate temperature — greedy sampling can loop.
+PARAMETER temperature 0.6
+PARAMETER top_p 0.95
+
+PARAMETER stop "<|im_end|>"
+PARAMETER stop "<|im_start|>"

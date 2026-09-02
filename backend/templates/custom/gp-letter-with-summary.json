@@ -1,0 +1,43 @@
+{
+  "key": "gp-letter-with-summary",
+  "name": "GP Letter",
+  "category": "letter",
+  "description": "Formal GP consultation letter with detailed clinical summary",
+  "documentationMode": "routed_parallel",
+  "outputLanguage": "en",
+  "template": {
+    "sections": [
+      {
+        "key": "corti-subjective",
+        "nameOverride": "Patient History \u0026 Presenting Complaint",
+        "contentOverride": "Include: presenting complaint and duration, relevant past medical history, current medications, social history if relevant. Exclude: detailed physical examination findings.",
+        "writingStyleOverride": "formal",
+        "additionalInstructionsOverride": "Start the letter exactly with the following structure:Dear {{RECIPIENT_DOCTOR}}, then newline then newline, then Re: {{PATIENT_NAME}}, then newline then newline, then Thank you for the referral. Write a concise clinical history suitable for GP communication. Use professional medical language."
+      },
+      {
+        "key": "corti-objective",
+        "nameOverride": "Clinical Findings",
+        "contentOverride": "Include: vital signs, physical examination findings, laboratory results with values and reference ranges, imaging findings. Exclude: subjective symptoms, patient history. Exclude: subjective symptoms, patient history.",
+        "writingStyleOverride": "formal",
+        "additionalInstructionsOverride": "Present examination findings and test results in a structured clinical format. Only include findings that were explicitly mentioned."
+      },
+      {
+        "key": "corti-assessment",
+        "nameOverride": "Diagnosis \u0026 Clinical Assessment",
+        "contentOverride": "Include: primary diagnosis, differential diagnoses considered, clinical reasoning, relevant risk factors. Exclude: treatment details, medication lists.",
+        "writingStyleOverride": "formal"
+      },
+      {
+        "key": "corti-plan",
+        "nameOverride": "Management Plan \u0026 Recommendations",
+        "contentOverride": "Include: treatment initiated, medications prescribed with doses, follow-up arrangements, specific actions requested from GP, patient education provided. Exclude: examination findings, clinical reasoning.",
+        "writingStyleOverride": "formal",
+        "formatRuleOverride": "Use numbered lists for medications and clear action items for GP",
+        "additionalInstructionsOverride": "Close with clear recommendations for GP follow-up. End with formal letter closing: 'Thank you for your continued care of this patient.' followed by 'Yours sincerely,' then '{{SENDER_DOCTOR}}' and '{{SENDER_TITLE}}'."
+      }
+    ]
+  },
+  "isActive": false,
+  "createdAt": "2026-02-08T00:00:00Z",
+  "updatedAt": "2026-04-04T23:07:21+05:00"
+}

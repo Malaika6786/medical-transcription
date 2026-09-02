@@ -1,0 +1,44 @@
+# Docker alternative to setup.sh for the AI model server.
+# Requires: docker + NVIDIA Container Toolkit on a GPU VM.
+#
+#   AI_PROXY_TOKEN=$(openssl rand -hex 32)
+#   echo "AI_PROXY_TOKEN=$AI_PROXY_TOKEN" > .env
+#   docker compose up -d
+#   docker compose exec ollama ollama pull hf.co/empero-ai/Qwythos-9B-Claude-Mythos-5-1M-GGUF:Q4_K_M
+#   docker compose exec ollama ollama create qwythos-16k-chat -f /modelfiles/Modelfile
+#
+# Then point the backend at http://VM_IP:8443/v1 with AI_API_KEY=$AI_PROXY_TOKEN.
+services:
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    environment:
+      - OLLAMA_KEEP_ALIVE=-1
+      - OLLAMA_FLASH_ATTENTION=1
+      - OLLAMA_NUM_PARALLEL=2
+    volumes:
+      - ollama-models:/root/.ollama
+      - ./Modelfile:/modelfiles/Modelfile:ro
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    # No ports: — only reachable through the proxy below.
+
+  proxy:
+    image: nginx:alpine
+    restart: unless-stopped
+    depends_on:
+      - ollama
+    ports:
+      - "8443:8443"
+    environment:
+      - AI_PROXY_TOKEN=${AI_PROXY_TOKEN:?set AI_PROXY_TOKEN in .env}
+    volumes:
+      - ./nginx-docker.conf.template:/etc/nginx/templates/default.conf.template:ro
+
+volumes:
+  ollama-models:

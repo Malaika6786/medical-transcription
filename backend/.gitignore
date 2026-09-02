@@ -1,0 +1,95 @@
+# =================================
+# Go Backend .gitignore
+# =================================
+
+# =================================
+# Binaries
+# =================================
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+corti-backend
+corti-backend.exe
+main
+main.exe
+
+# =================================
+# Test & Coverage
+# =================================
+*.test
+*.out
+coverage.txt
+coverage.html
+*.cover
+*.prof
+
+# =================================
+# Dependency directories
+# =================================
+vendor/
+
+# =================================
+# Go workspace file
+# =================================
+go.work
+go.work.sum
+
+# =================================
+# Environment
+# =================================
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# =================================
+# IDE
+# =================================
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# =================================
+# OS
+# =================================
+.DS_Store
+Thumbs.db
+
+# =================================
+# Debug
+# =================================
+debug
+__debug_bin
+__debug_bin*
+
+# =================================
+# Logs
+# =================================
+*.log
+logs/
+
+# =================================
+# Temporary files
+# =================================
+tmp/
+temp/
+*.tmp
+*.bak
+
+# =================================
+# Air (live reload) temp directory
+# =================================
+tmp/
+
+# =================================
+# Uploaded files (if stored locally)
+# =================================
+uploads/
+audio_files/
+
+
+# Legacy migration-source data (real credentials/session content — never commit)
+cmd/server/data/

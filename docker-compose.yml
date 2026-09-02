@@ -1,0 +1,21 @@
+# PostgreSQL + pgvector for the medical-transcription backend (docs/adr/0001).
+# The current dev machine runs Homebrew postgresql@17 + pgvector instead
+# (Docker is not installed there); this file is the portable path.
+#
+#   docker compose up -d
+#   DATABASE_URL=postgres://meditrans:meditrans@localhost:5432/meditrans?sslmode=disable
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: meditrans-db
+    environment:
+      POSTGRES_DB: meditrans
+      POSTGRES_USER: meditrans
+      POSTGRES_PASSWORD: meditrans
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

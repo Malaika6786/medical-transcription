@@ -1,0 +1,191 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`toMarkdown > renders the SOAP-style note with group headings 1`] = `
+"# Ambient Session — 30 Jul 2026
+
+**Template:** SOAP-style Note  
+**Patient:** Jane Doe  
+**Clinician:** Dr A. Smith  
+**Consultation date:** 30 July 2026, 14:05  
+**Session ID:** sess-abc123  
+**Generated:** 30 July 2026, 14:22
+
+---
+
+## Summary
+
+Two weeks of intermittent frontal headaches, worse in the afternoons.
+
+## Subjective
+
+### Chief Complaint
+
+Intermittent headaches for two weeks
+
+### History
+
+- No prior head injury
+
+### Symptoms
+
+- frontal headache
+- photophobia
+
+### Allergies
+
+_None mentioned_
+
+## Assessment
+
+### Diagnosis
+
+- Tension-type headache
+
+### Differential Diagnosis
+
+- Migraine without aura
+
+## Plan
+
+### Treatment
+
+- Continue ibuprofen 400 mg PRN
+
+### Medications
+
+- ibuprofen 400 mg as needed
+
+### Follow-up
+
+- Review in four weeks if unresolved
+
+### Action Items
+
+- Patient to keep a headache diary
+
+## Reference
+
+### Medical Terms
+
+- photophobia
+
+---
+
+_AI-generated documentation aid. Every section is derived from an automated extraction of this consultation, not from clinician dictation. Verify clinically before use or filing._
+"
+`;
+
+exports[`toMarkdown > renders the brief summary with the Q&A appendix 1`] = `
+"# Ambient Session — 30 Jul 2026
+
+**Template:** Brief Summary  
+**Patient:** Jane Doe  
+**Clinician:** Dr A. Smith  
+**Consultation date:** 30 July 2026, 14:05  
+**Session ID:** sess-abc123  
+**Generated:** 30 July 2026, 14:22
+
+---
+
+## Summary
+
+Two weeks of intermittent frontal headaches, worse in the afternoons.
+
+## Chief Complaint
+
+Intermittent headaches for two weeks
+
+## Diagnosis
+
+- Tension-type headache
+
+## Medications
+
+- ibuprofen 400 mg as needed
+
+## Follow-up
+
+- Review in four weeks if unresolved
+
+## Action Items
+
+- Patient to keep a headache diary
+
+## Follow-up Questions
+
+**Q:** What allergies were mentioned?
+
+**A:** The extracted record does not include any allergies.
+
+---
+
+_AI-generated documentation aid. Every section is derived from an automated extraction of this consultation, not from clinician dictation. Verify clinically before use or filing._
+"
+`;
+
+exports[`toMarkdown > renders the full clinical report 1`] = `
+"# Ambient Session — 30 Jul 2026
+
+**Template:** Full Clinical Report  
+**Patient:** Jane Doe  
+**Clinician:** Dr A. Smith  
+**Consultation date:** 30 July 2026, 14:05  
+**Session ID:** sess-abc123  
+**Generated:** 30 July 2026, 14:22
+
+---
+
+## Summary
+
+Two weeks of intermittent frontal headaches, worse in the afternoons.
+
+## Chief Complaint
+
+Intermittent headaches for two weeks
+
+## Diagnosis
+
+- Tension-type headache
+
+## Differential Diagnosis
+
+- Migraine without aura
+
+## Allergies
+
+_None mentioned_
+
+## Medications
+
+- ibuprofen 400 mg as needed
+
+## Symptoms
+
+- frontal headache
+- photophobia
+
+## Medical Terms
+
+- photophobia
+
+## History
+
+- No prior head injury
+
+## Treatment
+
+- Continue ibuprofen 400 mg PRN
+
+## Follow-up
+
+- Review in four weeks if unresolved
+
+## Action Items
+
+- Patient to keep a headache diary
+
+---
+
+_AI-generated documentation aid. Every section is derived from an automated extraction of this consultation, not from clinician dictation. Verify clinically before use or filing._
+"
+`;

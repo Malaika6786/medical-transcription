@@ -1,0 +1,3 @@
+# pgx with hand-written SQL, no ORM
+
+GORM would be the "obvious" Go choice, but its pgvector support is awkward, and an ORM works against the project's deliberate lightweight-binary posture. We use `pgx/v5` with hand-written SQL, implemented as Postgres-backed stores behind the interfaces extracted from the existing `UserStore`/`SessionStore` (`internal/auth/storage.go`, implemented in `internal/pgstore`). Vectors travel as pgvector text literals bound through `::vector` casts, so no extra vector library is needed at all. Do not "fix" this by introducing an ORM — the choice is intentional: the SQL surface is small, and owning it keeps the vector queries (`<=>` cosine ordering, `UNION ALL` over chunk + extraction embeddings) explicit and explainable.

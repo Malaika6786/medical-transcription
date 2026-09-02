@@ -1,0 +1,71 @@
+{
+  "key": "gp-letter-summary",
+  "name": "GP Letter Summary",
+  "category": "letter",
+  "description": "Comprehensive GP referral letter with full clinical narrative in formal letter format (Heidi style)",
+  "documentationMode": "routed_parallel",
+  "outputLanguage": "en",
+  "isActive": true,
+  "template": {
+    "sections": [
+      {
+        "key": "corti-subjective",
+        "nameOverride": "Letter Opening & Patient Presentation",
+        "contentOverride": "Include: patient demographics (age, background, occupation if mentioned), presenting complaint with onset and context, detailed symptom description with progression, severity, associated symptoms, previous episodes, relevant past medical/surgical/family history. Exclude: examination findings, investigations, medications.",
+        "writingStyleOverride": "formal",
+        "formatRuleOverride": "Write as a formal letter with full sentences and cohesive paragraphs. No bullet points or lists.",
+        "additionalInstructionsOverride": "Start the letter with this exact structure:\n\n{{RECIPIENT_DOCTOR}}\n\nDear Doctor,\n\nRe: {{PATIENT_NAME}}, DOB: [date of birth if mentioned]\n\nThank you for referring [patient name] for [reason if known, otherwise 'for assessment'].\n\nThen write the patient background and presenting complaint as cohesive narrative paragraphs. Always refer to the patient by name or pronoun. Use professional medical language. Only include information explicitly mentioned in the transcript - do not infer or summarise details not stated."
+      },
+      {
+        "key": "corti-objective",
+        "nameOverride": "Clinical Findings on Examination",
+        "contentOverride": "Include: general appearance, vital signs, system-specific examination findings (positive and negative findings), any clinical observations. Exclude: patient history, symptoms, investigations, diagnoses.",
+        "writingStyleOverride": "formal",
+        "formatRuleOverride": "Write as a single cohesive paragraph with full sentences. No bullet points or listing format.",
+        "additionalInstructionsOverride": "Write examination findings as a flowing narrative paragraph, referring to the patient by name or pronoun. Structure logically from general appearance through system-specific findings. Only include findings explicitly mentioned in the transcript - if no examination findings mentioned, omit this section entirely."
+      },
+      {
+        "key": "corti-assessment",
+        "nameOverride": "Clinical Reasoning & Discussion",
+        "contentOverride": "Include: clinician's interpretation of the presentation, diagnostic considerations, differential diagnoses, patient education provided, treatment planning discussion. Exclude: examination details, medication lists, investigation lists.",
+        "writingStyleOverride": "formal",
+        "formatRuleOverride": "Write as cohesive narrative paragraphs with full sentences. No bullet points.",
+        "additionalInstructionsOverride": "Summarise the clinician's clinical reasoning and any discussion held with the patient using full sentences. Cover diagnostic considerations, patient education, and treatment planning rationale. Only include if explicitly mentioned in transcript, otherwise omit section entirely."
+      },
+      {
+        "key": "corti-diagnoses",
+        "nameOverride": "Diagnoses",
+        "contentOverride": "Include: all active diagnoses mentioned, past conditions relevant to ongoing management. Exclude: medications, investigations, management plan.",
+        "writingStyleOverride": "formal",
+        "formatRuleOverride": "Use numbered list format for diagnoses.",
+        "additionalInstructionsOverride": "List each diagnosis as a separate numbered item using appropriate medical terminology. Include all diagnoses mentioned in the consultation. Only include if explicitly mentioned in transcript, otherwise omit section entirely. Format as:\n\nDiagnoses:\n1. [First diagnosis]\n2. [Second diagnosis]"
+      },
+      {
+        "key": "corti-diagnostic-results",
+        "nameOverride": "Investigations",
+        "contentOverride": "Include: all investigations mentioned (imaging, pathology, other tests), historical results with dates/years if provided, chronological timeline. Exclude: diagnoses, medications, management plan.",
+        "writingStyleOverride": "formal",
+        "formatRuleOverride": "Use numbered list format in chronological order.",
+        "additionalInstructionsOverride": "List each investigation as a separate numbered item in chronological order. Include any imaging, pathology, or other relevant tests mentioned, including historical results. Only include if explicitly mentioned in transcript, otherwise omit section entirely. Format as:\n\nInvestigations:\n1. [Investigation with date if available]\n2. [Investigation with date if available]"
+      },
+      {
+        "key": "corti-medications",
+        "nameOverride": "Medications",
+        "contentOverride": "Include: medication names, doses, frequencies, any dosing ranges, recent medication changes or discontinuations with dates. Exclude: diagnoses, investigations, general management advice.",
+        "writingStyleOverride": "formal",
+        "formatRuleOverride": "Use numbered list format for medications.",
+        "additionalInstructionsOverride": "List each medication as a separate numbered item with name, dose, and frequency. Note any flexibility in dosing as a range. If medications have been recently stopped or adjusted, include those details. Only include if explicitly mentioned in transcript, otherwise omit section entirely. Format as:\n\nMedications:\n1. [Medication name] [dose] [frequency]\n2. [Medication name] [dose] [frequency]\n\nNote: [Include any medication changes, weaning details, or discontinuation information if applicable]"
+      },
+      {
+        "key": "corti-plan",
+        "nameOverride": "Suggested Management Plan",
+        "contentOverride": "Include: lifestyle and self-management recommendations, planned investigations, follow-up actions, specialist referrals, timeframes, secretary instructions if mentioned, detailed management approach, anticipated side effects or restrictions. Exclude: diagnoses, examination findings, medication lists (unless part of plan).",
+        "writingStyleOverride": "formal",
+        "formatRuleOverride": "Use numbered list for action items, followed by a narrative paragraph for detailed management.",
+        "additionalInstructionsOverride": "Format the management plan as:\n\nSuggested Management Plan:\n1. [Lifestyle and self-management recommendations if mentioned]\n2. [Planned investigations or follow-up actions with timeframes if discussed]\n3. ACTIONS FOR SECRETARY: [Administrative tasks if mentioned - scheduling, referrals, documents. Only include if explicitly stated]\n\n[Then write a detailed paragraph summarising agreed next steps including medications, procedures, referrals, or discharge planning. Mention anticipated side effects or restrictions.]\n\nEnd the letter with:\n\nYours sincerely,\n\n{{SENDER_DOCTOR}}\n{{SENDER_TITLE}}\n\nOnly include information explicitly mentioned in transcript - do not infer or create details not stated. Always refer to patient by name or pronoun. Use professional medical language throughout."
+      }
+    ]
+  },
+  "createdAt": "2026-03-26T00:00:00Z",
+  "updatedAt": "2026-03-26T00:00:00Z"
+}

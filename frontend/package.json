@@ -1,0 +1,41 @@
+{
+  "name": "corti-medical-transcription-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix"
+  },
+  "dependencies": {
+    "@corti/embedded-web": "^0.3.1",
+    "@mdi/font": "^7.4.47",
+    "@tiptap/extension-heading": "^3.19.0",
+    "@tiptap/extension-text-align": "^3.19.0",
+    "@tiptap/extension-underline": "^3.19.0",
+    "@tiptap/starter-kit": "^3.19.0",
+    "@tiptap/vue-3": "^3.19.0",
+    "axios": "^1.13.2",
+    "docx": "^9.7.1",
+    "driver.js": "^1.4.0",
+    "pdfmake": "^0.3.11",
+    "pinia": "^2.3.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0",
+    "vuetify": "^3.7.5"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.1",
+    "@types/pdfmake": "^0.3.3",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "sass": "^1.83.0",
+    "typescript": "~5.7.2",
+    "vite": "^6.0.5",
+    "vite-plugin-vuetify": "^2.0.4",
+    "vitest": "^4.1.10",
+    "vue-tsc": "^2.2.0"
+  }
+}

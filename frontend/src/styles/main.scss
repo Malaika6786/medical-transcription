@@ -1,0 +1,578 @@
+// =============================================================================
+// XStek AI Medical Transcription - Professional Theme Styles
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Typography
+// -----------------------------------------------------------------------------
+:root {
+  --font-primary: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+  font-family: var(--font-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6,
+.text-h1, .text-h2, .text-h3, .text-h4, .text-h5, .text-h6 {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+// -----------------------------------------------------------------------------
+// Theme-Adaptive Variables
+// Uses Vuetify's CSS variables for automatic theme switching
+// -----------------------------------------------------------------------------
+
+// Dark theme specific styles
+.v-theme--customDarkTheme {
+  // Glass morphism for dark mode
+  --glass-bg: rgba(22, 27, 34, 0.85);
+  --glass-border: rgba(48, 54, 61, 0.8);
+  --glass-shadow: rgba(0, 0, 0, 0.4);
+  
+  // Scrollbar colors
+  --scrollbar-thumb: rgba(139, 148, 158, 0.4);
+  --scrollbar-thumb-hover: rgba(139, 148, 158, 0.6);
+  --scrollbar-track: rgba(22, 27, 34, 0.5);
+  
+  // Gradient accents
+  --gradient-primary: linear-gradient(135deg, #00D9C4 0%, #8B5CF6 100%);
+  --gradient-subtle: linear-gradient(180deg, rgba(0, 217, 196, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+  
+  // Text emphasis
+  --text-primary: #F0F6FC;
+  --text-secondary: #8B949E;
+  --text-muted: #6E7681;
+  
+  // Borders and dividers
+  --border-subtle: rgba(48, 54, 61, 0.6);
+  --border-default: rgba(48, 54, 61, 1);
+  
+  // Interactive states
+  --hover-overlay: rgba(255, 255, 255, 0.06);
+  --active-overlay: rgba(0, 217, 196, 0.12);
+}
+
+// Light theme specific styles
+.v-theme--customLightTheme {
+  // Glass morphism for light mode
+  --glass-bg: rgba(255, 255, 255, 0.9);
+  --glass-border: rgba(209, 213, 219, 0.8);
+  --glass-shadow: rgba(0, 0, 0, 0.08);
+  
+  // Scrollbar colors
+  --scrollbar-thumb: rgba(107, 114, 128, 0.4);
+  --scrollbar-thumb-hover: rgba(107, 114, 128, 0.6);
+  --scrollbar-track: rgba(243, 244, 246, 0.5);
+  
+  // Gradient accents - darker for light mode
+  --gradient-primary: linear-gradient(135deg, #0D9488 0%, #7C3AED 100%);
+  --gradient-subtle: linear-gradient(180deg, rgba(13, 148, 136, 0.08) 0%, rgba(124, 58, 237, 0.08) 100%);
+  
+  // Text emphasis
+  --text-primary: #111827;
+  --text-secondary: #4B5563;
+  --text-muted: #6B7280;
+  
+  // Borders and dividers
+  --border-subtle: rgba(209, 213, 219, 0.6);
+  --border-default: rgba(209, 213, 219, 1);
+  
+  // Interactive states
+  --hover-overlay: rgba(0, 0, 0, 0.04);
+  --active-overlay: rgba(13, 148, 136, 0.12);
+}
+
+// -----------------------------------------------------------------------------
+// Custom Scrollbar (theme-adaptive)
+// -----------------------------------------------------------------------------
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track, transparent);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb, rgba(128, 128, 128, 0.4));
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  
+  &:hover {
+    background: var(--scrollbar-thumb-hover, rgba(128, 128, 128, 0.6));
+  }
+}
+
+// Firefox scrollbar
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb, rgba(128, 128, 128, 0.4)) var(--scrollbar-track, transparent);
+}
+
+// -----------------------------------------------------------------------------
+// Animations
+// -----------------------------------------------------------------------------
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(0, 217, 196, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(0, 217, 196, 0);
+  }
+}
+
+@keyframes waveform {
+  0%, 100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.4);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+// -----------------------------------------------------------------------------
+// Waveform Animation (Recording Indicator)
+// -----------------------------------------------------------------------------
+.waveform-bar {
+  display: inline-block;
+  width: 4px;
+  height: 24px;
+  background: var(--gradient-primary, linear-gradient(180deg, #00D9C4 0%, #8B5CF6 100%));
+  border-radius: 2px;
+  margin: 0 2px;
+  animation: waveform 1s ease-in-out infinite;
+  
+  @for $i from 1 through 5 {
+    &:nth-child(#{$i}) {
+      animation-delay: #{$i * 0.1}s;
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Glass Morphism Card (theme-adaptive)
+// -----------------------------------------------------------------------------
+.glass-card {
+  background: var(--glass-bg) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: 0 4px 24px var(--glass-shadow);
+  transition: all 0.3s ease;
+  
+  &:hover {
+    box-shadow: 0 8px 32px var(--glass-shadow);
+  }
+}
+
+// Elevated glass variant
+.glass-card-elevated {
+  @extend .glass-card;
+  box-shadow: 0 8px 32px var(--glass-shadow);
+}
+
+// -----------------------------------------------------------------------------
+// Gradient Text (theme-adaptive)
+// -----------------------------------------------------------------------------
+.gradient-text {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+// -----------------------------------------------------------------------------
+// Transcript Container
+// -----------------------------------------------------------------------------
+.transcript-container {
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 1rem;
+  border-radius: 12px;
+  
+  .transcript-segment {
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: 12px;
+    background: var(--hover-overlay);
+    transition: all 0.2s ease;
+    
+    &.partial {
+      opacity: 0.8;
+      border-left: 3px solid rgb(var(--v-theme-secondary));
+      background: rgba(var(--v-theme-secondary), 0.08);
+    }
+    
+    &.final {
+      border-left: 3px solid rgb(var(--v-theme-primary));
+      background: rgba(var(--v-theme-primary), 0.06);
+    }
+    
+    &:hover {
+      transform: translateX(4px);
+      background: var(--active-overlay);
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Medical Event Cards
+// -----------------------------------------------------------------------------
+.medical-event-card {
+  border-left: 4px solid;
+  transition: all 0.3s ease;
+  background: var(--hover-overlay);
+  
+  &.diagnosis {
+    border-left-color: #F87171;
+    
+    .v-theme--customLightTheme & {
+      border-left-color: #DC2626;
+    }
+  }
+  
+  &.medication {
+    border-left-color: #4ADE80;
+    
+    .v-theme--customLightTheme & {
+      border-left-color: #16A34A;
+    }
+  }
+  
+  &.symptom {
+    border-left-color: #FBBF24;
+    
+    .v-theme--customLightTheme & {
+      border-left-color: #D97706;
+    }
+  }
+  
+  &.procedure {
+    border-left-color: #60A5FA;
+    
+    .v-theme--customLightTheme & {
+      border-left-color: #2563EB;
+    }
+  }
+  
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px var(--glass-shadow);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Upload Zone
+// -----------------------------------------------------------------------------
+.upload-zone {
+  border: 2px dashed var(--border-default);
+  border-radius: 16px;
+  padding: 3rem 2rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  background: var(--hover-overlay);
+  
+  &:hover,
+  &.dragging {
+    border-color: rgb(var(--v-theme-primary));
+    background: rgba(var(--v-theme-primary), 0.06);
+  }
+  
+  &.has-file {
+    border-color: rgb(var(--v-theme-success));
+    background: rgba(var(--v-theme-success), 0.06);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Status Indicators
+// -----------------------------------------------------------------------------
+.status-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  
+  &::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  
+  &.connected {
+    background: rgba(var(--v-theme-success), 0.15);
+    color: rgb(var(--v-theme-success));
+    
+    &::before {
+      background: rgb(var(--v-theme-success));
+      box-shadow: 0 0 8px rgb(var(--v-theme-success));
+    }
+  }
+  
+  &.disconnected {
+    background: rgba(var(--v-theme-error), 0.15);
+    color: rgb(var(--v-theme-error));
+    
+    &::before {
+      background: rgb(var(--v-theme-error));
+    }
+  }
+  
+  &.recording {
+    background: rgba(var(--v-theme-primary), 0.15);
+    color: rgb(var(--v-theme-primary));
+    
+    &::before {
+      background: rgb(var(--v-theme-primary));
+      animation: pulseGlow 1.5s infinite;
+    }
+  }
+  
+  &.processing {
+    background: rgba(var(--v-theme-warning), 0.15);
+    color: rgb(var(--v-theme-warning));
+    
+    &::before {
+      background: rgb(var(--v-theme-warning));
+      animation: pulse 1s infinite;
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// SOAP Note Editor Styles
+// -----------------------------------------------------------------------------
+.soap-section {
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  border: 1px solid var(--border-subtle);
+  background: var(--hover-overlay);
+  transition: all 0.2s ease;
+  
+  &.active {
+    border-color: rgb(var(--v-theme-primary));
+    background: rgba(var(--v-theme-primary), 0.08);
+    box-shadow: 0 0 0 2px rgba(var(--v-theme-primary), 0.2);
+  }
+  
+  &:hover:not(.active) {
+    background: var(--active-overlay);
+  }
+  
+  .section-header {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .section-content {
+    min-height: 60px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Table Improvements
+// -----------------------------------------------------------------------------
+.v-table {
+  background: transparent !important;
+  
+  thead {
+    tr {
+      background: var(--hover-overlay);
+    }
+    
+    th {
+      font-weight: 600 !important;
+      color: var(--text-primary) !important;
+      border-bottom: 1px solid var(--border-default) !important;
+    }
+  }
+  
+  tbody {
+    tr {
+      &:hover {
+        background: var(--hover-overlay) !important;
+      }
+    }
+    
+    td {
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border-subtle) !important;
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Alert Improvements
+// -----------------------------------------------------------------------------
+.v-alert {
+  border-radius: 12px !important;
+  
+  &.v-alert--variant-tonal {
+    .v-alert__content {
+      color: inherit;
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Card Improvements
+// -----------------------------------------------------------------------------
+.v-card {
+  &.v-card--variant-outlined {
+    border-color: var(--border-default);
+    background: var(--hover-overlay);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Text Utility Classes (theme-adaptive)
+// -----------------------------------------------------------------------------
+.text-primary-emphasis {
+  color: var(--text-primary) !important;
+}
+
+.text-secondary-emphasis {
+  color: var(--text-secondary) !important;
+}
+
+.text-muted {
+  color: var(--text-muted) !important;
+}
+
+// -----------------------------------------------------------------------------
+// Ensure proper contrast for medium-emphasis text
+// -----------------------------------------------------------------------------
+.text-medium-emphasis {
+  .v-theme--customLightTheme & {
+    color: #4B5563 !important;
+  }
+  
+  .v-theme--customDarkTheme & {
+    color: #8B949E !important;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Button Refinements
+// -----------------------------------------------------------------------------
+.v-btn {
+  text-transform: none;
+  letter-spacing: 0;
+  
+  &.v-btn--variant-outlined {
+    border-color: var(--border-default);
+    
+    &:hover {
+      background: var(--hover-overlay);
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Chip Refinements
+// -----------------------------------------------------------------------------
+.v-chip {
+  font-weight: 500;
+}
+
+// -----------------------------------------------------------------------------
+// Input Field Refinements
+// -----------------------------------------------------------------------------
+.v-field {
+  &.v-field--variant-outlined {
+    .v-field__outline {
+      --v-field-border-opacity: 0.6;
+    }
+    
+    &:hover .v-field__outline {
+      --v-field-border-opacity: 1;
+    }
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Navigation / App Bar
+// -----------------------------------------------------------------------------
+.v-app-bar {
+  &.glass-card {
+    border-left: none !important;
+    border-right: none !important;
+    border-top: none !important;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Code Block Styling
+// -----------------------------------------------------------------------------
+code, pre {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.875em;
+  border-radius: 6px;
+}
+
+code {
+  padding: 0.2em 0.4em;
+  background: var(--hover-overlay);
+  color: rgb(var(--v-theme-primary));
+}
+
+pre {
+  padding: 1rem;
+  background: var(--glass-bg);
+  border: 1px solid var(--border-subtle);
+  overflow-x: auto;
+  
+  code {
+    background: transparent;
+    padding: 0;
+    color: inherit;
+  }
+}

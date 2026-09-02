@@ -1,0 +1,112 @@
+# =================================
+# Vue/Vite Frontend .gitignore
+# =================================
+
+# =================================
+# Dependencies
+# =================================
+node_modules/
+.pnp
+.pnp.js
+
+# =================================
+# Build Output
+# =================================
+dist/
+dist-ssr/
+build/
+*.local
+
+# =================================
+# Cache
+# =================================
+.cache/
+.parcel-cache/
+.vite/
+*.tsbuildinfo
+
+# =================================
+# Test & Coverage
+# =================================
+coverage/
+.nyc_output/
+
+# =================================
+# Environment
+# =================================
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# =================================
+# Logs
+# =================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# =================================
+# IDE & Editor
+# =================================
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# =================================
+# OS
+# =================================
+.DS_Store
+Thumbs.db
+
+# =================================
+# TypeScript
+# =================================
+*.tsbuildinfo
+
+# =================================
+# Temporary
+# =================================
+tmp/
+temp/
+*.tmp
+*.bak
+
+# =================================
+# Optional: Lock files (uncomment if you want to ignore)
+# =================================
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# =================================
+# Sentry
+# =================================
+.sentryclirc
+
+# =================================
+# Playwright
+# =================================
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# =================================
+# Vitest
+# =================================
+vitest.config.ts.timestamp*
+# Emitted by `vue-tsc -b` because tsconfig.node.json is a composite project
+vitest.config.js
+vitest.config.d.ts
+
