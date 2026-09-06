@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { isAuthenticated, hasPermission } from '@/stores/auth'
+import { isAuthenticated, isApproved, hasPermission, defaultLandingPath } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -17,15 +17,45 @@ const router = createRouter({
       meta: { requiresAuth: false, isLoginPage: true }
     },
     {
+      path: '/pending-approval',
+      name: 'pending-approval',
+      component: () => import('@/views/PendingApprovalPage.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/pending-users',
+      name: 'pending-users',
+      component: () => import('@/views/PendingApprovalsPage.vue'),
+      meta: { requiresAuth: true, permission: 'users.manage' }
+    },
+    {
       path: '/',
       name: 'root',
-      redirect: '/ambient-session'
+      redirect: () => defaultLandingPath()
     },
     {
       path: '/home',
       name: 'home',
       component: () => import('@/views/HomePage.vue'),
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/my-dashboard',
+      name: 'my-dashboard',
+      component: () => import('@/views/MyDashboardPage.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/command-center',
+      name: 'command-center',
+      component: () => import('@/views/CommandCenterPage.vue'),
+      meta: { requiresAuth: true, permission: 'users.manage' }
+    },
+    {
+      path: '/user-dashboard/:userId',
+      name: 'user-dashboard',
+      component: () => import('@/views/MyDashboardPage.vue'),
+      meta: { requiresAuth: true, permission: 'users.manage' }
     },
     {
       path: '/async-transcription',
@@ -109,18 +139,29 @@ const router = createRouter({
 })
 
 router.beforeEach((to, _from, next) => {
-  const requiresAuth = to.meta.requiresAuth !== false
-  const isLoginPage  = to.meta.isLoginPage === true
-  const permission   = to.meta.permission as string | undefined
-
-  // Authenticated user trying to reach login → send to app.
-  if (isLoginPage && isAuthenticated.value) {
-    return next({ path: '/ambient-session' })
-  }
+  const requiresAuth  = to.meta.requiresAuth !== false
+  const isLoginPage   = to.meta.isLoginPage === true
+  const isPendingPage = to.name === 'pending-approval'
+  const permission    = to.meta.permission as string | undefined
 
   // Unauthenticated user trying to reach protected route → login.
   if (requiresAuth && !isAuthenticated.value) {
     return next({ name: 'login', query: { redirect: to.fullPath } })
+  }
+
+  // Authenticated but not yet approved (pending/rejected) → the status
+  // page, wherever they were headed, so a retroactively-pending account
+  // never lands on a broken-looking empty-nav screen with no explanation.
+  if (isAuthenticated.value && !isApproved.value && !isPendingPage) {
+    return next({ name: 'pending-approval' })
+  }
+
+  // Approved user trying to reach login/signup, or the pending page after
+  // having since been approved → send into the app, landing on their
+  // role-appropriate dashboard (same landing logic as the mobile app's
+  // HomeShell).
+  if (isAuthenticated.value && isApproved.value && (isLoginPage || isPendingPage)) {
+    return next({ path: defaultLandingPath() })
   }
 
   // Permission check — single call, no switch needed.

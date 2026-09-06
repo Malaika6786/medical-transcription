@@ -12,6 +12,12 @@
       </p>
     </div>
 
+    <DemoUsageBanner
+      feature="search"
+      label="Semantic Search"
+      description="Search your saved sessions by meaning, not just keywords."
+    />
+
     <!-- Query input -->
     <v-text-field
       v-model="query"
@@ -24,6 +30,7 @@
       clearable
       autofocus
       hide-details
+      data-tour="search-query"
       @keyup.enter="runSearch"
     >
       <template #append-inner>
@@ -33,6 +40,7 @@
           size="small"
           :loading="searching"
           :disabled="!query || !query.trim()"
+          data-tour="search-button"
           @click="runSearch"
         >
           Search
@@ -104,6 +112,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/services/api'
+import DemoUsageBanner from '@/components/DemoUsageBanner.vue'
 
 interface SearchResult {
   sessionId: string

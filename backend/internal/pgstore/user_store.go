@@ -15,7 +15,7 @@ import (
 	"corti-backend/internal/auth"
 )
 
-const userColumns = `id, username, email, password_hash, name, roles, granted_permissions, denied_permissions, is_active, created_at, created_by, last_login`
+const userColumns = `id, username, email, password_hash, name, roles, granted_permissions, denied_permissions, is_active, status, requested_role, created_at, created_by, last_login`
 
 const uniqueViolation = "23505"
 
@@ -25,7 +25,7 @@ func scanUser(row pgx.Row) (*auth.User, error) {
 		granted, denied []string
 		lastLogin       *time.Time
 	)
-	err := row.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Name, &u.Roles, &granted, &denied, &u.IsActive, &u.CreatedAt, &u.CreatedBy, &lastLogin)
+	err := row.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash, &u.Name, &u.Roles, &granted, &denied, &u.IsActive, &u.Status, &u.RequestedRole, &u.CreatedAt, &u.CreatedBy, &lastLogin)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, auth.ErrUserNotFound
 	}
@@ -80,8 +80,8 @@ func (s *Store) CreateUser(username, email, password, name string, roles []strin
 	user := auth.NewUser(username, email, string(hashed), name, roles, createdBy)
 	user.ID = id
 	_, err = s.pool.Exec(ctx, `
-		INSERT INTO users (id, username, email, password_hash, name, roles, granted_permissions, denied_permissions, is_active, created_at, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6, '{}', '{}', TRUE, $7, $8)`,
+		INSERT INTO users (id, username, email, password_hash, name, roles, granted_permissions, denied_permissions, is_active, status, created_at, created_by)
+		VALUES ($1, $2, $3, $4, $5, $6, '{}', '{}', TRUE, 'approved', $7, $8)`,
 		user.ID, user.Username, user.Email, user.PasswordHash, user.Name, user.Roles, user.CreatedAt, user.CreatedBy)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -94,6 +94,151 @@ func (s *Store) CreateUser(username, email, password, name string, roles []strin
 		return nil, err
 	}
 	return user, nil
+}
+
+// CreateSignupUser creates a new self-service signup: no roles are granted
+// yet (requestedRole records what they asked for) and status is "pending"
+// until a superuser calls ApproveUser. See auth.User.IsApproved for how
+// this is enforced even though the account otherwise exists and can log in.
+func (s *Store) CreateSignupUser(username, email, password, name, requestedRole, createdBy string) (*auth.User, error) {
+	ctx := context.Background()
+	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+	id, err := s.nextUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	user := auth.NewUser(username, email, string(hashed), name, []string{}, createdBy)
+	user.ID = id
+	user.Status = "pending"
+	user.RequestedRole = requestedRole
+	_, err = s.pool.Exec(ctx, `
+		INSERT INTO users (id, username, email, password_hash, name, roles, granted_permissions, denied_permissions, is_active, status, requested_role, created_at, created_by)
+		VALUES ($1, $2, $3, $4, $5, '{}', '{}', '{}', TRUE, 'pending', $6, $7, $8)`,
+		user.ID, user.Username, user.Email, user.PasswordHash, user.Name, user.RequestedRole, user.CreatedAt, user.CreatedBy)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == uniqueViolation {
+			if pgErr.ConstraintName == "users_username_key" {
+				return nil, auth.ErrUsernameExists
+			}
+			return nil, auth.ErrUserExists
+		}
+		return nil, err
+	}
+	return user, nil
+}
+
+// ListPendingUsers returns all users awaiting superuser approval, oldest
+// request first.
+func (s *Store) ListPendingUsers() []*auth.User {
+	rows, err := s.pool.Query(context.Background(),
+		`SELECT `+userColumns+` FROM users WHERE status = 'pending' ORDER BY created_at`)
+	if err != nil {
+		log.Printf("pgstore: list pending users: %v", err)
+		return []*auth.User{}
+	}
+	defer rows.Close()
+	users := []*auth.User{}
+	for rows.Next() {
+		u, err := scanUser(rows)
+		if err != nil {
+			log.Printf("pgstore: scan pending user: %v", err)
+			continue
+		}
+		users = append(users, u)
+	}
+	return users
+}
+
+// ApproveUser marks a pending (or rejected) account approved. If the
+// account has no roles yet (the normal case for a fresh signup — see
+// CreateSignupUser), roleIDForApprove resolves RequestedRole to an actual
+// role ID and grants it; a retroactively-pending existing account already
+// has real roles (see cmd/backfill-approval) and just needs the status flip.
+func (s *Store) ApproveUser(id string) (*auth.User, error) {
+	user, err := s.GetUserByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if len(user.Roles) == 0 && user.RequestedRole != "" {
+		if err := s.mustAffectUser(`UPDATE users SET status = 'approved', roles = $2 WHERE id = $1`,
+			id, []string{user.RequestedRole}); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := s.mustAffectUser(`UPDATE users SET status = 'approved' WHERE id = $1`, id); err != nil {
+			return nil, err
+		}
+	}
+	return s.GetUserByID(id)
+}
+
+// RejectUser marks a pending account rejected. Its (empty, for a fresh
+// signup) roles are left as-is — rejecting never grants access.
+func (s *Store) RejectUser(id string) (*auth.User, error) {
+	if err := s.mustAffectUser(`UPDATE users SET status = 'rejected' WHERE id = $1`, id); err != nil {
+		return nil, err
+	}
+	return s.GetUserByID(id)
+}
+
+// GetDemoUsage returns how many times userID has used feature (0 if never).
+func (s *Store) GetDemoUsage(ctx context.Context, userID, feature string) (int, error) {
+	var count int
+	err := s.pool.QueryRow(ctx,
+		`SELECT use_count FROM demo_usage WHERE user_id = $1 AND feature = $2`, userID, feature).Scan(&count)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, nil
+	}
+	return count, err
+}
+
+// IncrementDemoUsage records one more use of feature by userID.
+func (s *Store) IncrementDemoUsage(ctx context.Context, userID, feature string) error {
+	_, err := s.pool.Exec(ctx, `
+		INSERT INTO demo_usage (user_id, feature, use_count) VALUES ($1, $2, 1)
+		ON CONFLICT (user_id, feature) DO UPDATE SET use_count = demo_usage.use_count + 1`,
+		userID, feature)
+	return err
+}
+
+// BackfillPendingApproval retroactively marks every existing account except
+// the hardcoded superuser as "pending" — see cmd/backfill-approval, the
+// one-time manual tool that calls this. Real `roles` are left untouched;
+// only status/requested_role change, so approving later is a pure status
+// flip, never a re-grant.
+func (s *Store) BackfillPendingApproval(ctx context.Context) (int64, error) {
+	tag, err := s.pool.Exec(ctx, `
+		UPDATE users
+		SET status = 'pending', requested_role = COALESCE(roles[1], 'user')
+		WHERE email != 'admin@xstek.net' AND status = 'approved'`)
+	if err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
+}
+
+// ListDemoUsage returns feature -> use_count for every feature userID has
+// touched at least once (a feature with no row simply means 0 uses).
+func (s *Store) ListDemoUsage(ctx context.Context, userID string) (map[string]int, error) {
+	rows, err := s.pool.Query(ctx, `SELECT feature, use_count FROM demo_usage WHERE user_id = $1`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	usage := map[string]int{}
+	for rows.Next() {
+		var feature string
+		var count int
+		if err := rows.Scan(&feature, &count); err != nil {
+			return nil, err
+		}
+		usage[feature] = count
+	}
+	return usage, rows.Err()
 }
 
 // nextUserID draws the next value from user_id_seq and formats it as a
@@ -122,9 +267,15 @@ func (s *Store) UpsertUser(ctx context.Context, u *auth.User) error {
 		// Legacy JSON records predate the username column.
 		username = strings.SplitN(u.Email, "@", 2)[0]
 	}
+	status := u.Status
+	if status == "" {
+		// Seeding and cmd/migrate-json both predate the approval workflow —
+		// these are already-vetted accounts, not new self-signups.
+		status = "approved"
+	}
 	_, err := s.pool.Exec(ctx, `
-		INSERT INTO users (id, username, email, password_hash, name, roles, granted_permissions, denied_permissions, is_active, created_at, created_by, last_login)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+		INSERT INTO users (id, username, email, password_hash, name, roles, granted_permissions, denied_permissions, is_active, status, requested_role, created_at, created_by, last_login)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		ON CONFLICT (id) DO UPDATE SET
 			username = EXCLUDED.username,
 			email = EXCLUDED.email,
@@ -138,7 +289,7 @@ func (s *Store) UpsertUser(ctx context.Context, u *auth.User) error {
 			last_login = EXCLUDED.last_login`,
 		u.ID, username, u.Email, u.PasswordHash, u.Name, u.Roles,
 		permsToStrings(u.GrantedPerms), permsToStrings(u.DeniedPerms),
-		u.IsActive, createdAt, u.CreatedBy, lastLogin)
+		u.IsActive, status, u.RequestedRole, createdAt, u.CreatedBy, lastLogin)
 	return err
 }
 

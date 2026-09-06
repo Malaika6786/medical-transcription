@@ -30,7 +30,12 @@
 
     <!-- Save Button at bottom of document -->
     <div v-if="showSaveButton" :class="hideTitle ? 'pt-4' : 'px-4 pb-4'">
-      <div class="d-flex justify-end">
+      <div class="d-flex justify-space-between align-center ga-2 flex-wrap">
+        <DocumentExportButtons
+          :html="localContent"
+          :title="documentTitle"
+          :template-name="templateName"
+        />
         <v-btn
           color="primary"
           variant="elevated"
@@ -48,6 +53,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import RichTextEditor from '@/components/RichTextEditor.vue'
+import DocumentExportButtons from '@/components/DocumentExportButtons.vue'
 
 const props = withDefaults(defineProps<{
   modelValue: string
@@ -55,11 +61,15 @@ const props = withDefaults(defineProps<{
   showSaveButton?: boolean
   isSaving?: boolean
   hideTitle?: boolean  // Hide title when used inside expansion panel
+  documentTitle?: string
+  templateName?: string
 }>(), {
   isProcessing: false,
   showSaveButton: true,
   isSaving: false,
-  hideTitle: false
+  hideTitle: false,
+  documentTitle: 'Generated Document',
+  templateName: 'Clinical Document'
 })
 
 const emit = defineEmits<{

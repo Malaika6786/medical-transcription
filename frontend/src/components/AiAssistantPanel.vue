@@ -19,6 +19,12 @@
     </v-card-title>
 
     <v-card-text>
+      <DemoUsageBanner
+        feature="ai_summary"
+        label="AI Summary"
+        description="Generates a structured clinical summary from the transcript."
+      />
+
       <!-- Summarizing state -->
       <div v-if="isSummarizing" class="text-center py-8">
         <v-progress-circular indeterminate color="secondary" size="36" class="mb-3" />
@@ -181,6 +187,7 @@ import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useAiAssistant } from '@/composables/useAiAssistant'
 import type { AiExtraction } from '@/composables/useAiAssistant'
 import AiReportDialog from '@/components/AiReportDialog.vue'
+import DemoUsageBanner from '@/components/DemoUsageBanner.vue'
 import type { ReportMetaSource } from '@/services/report'
 
 const props = defineProps<{

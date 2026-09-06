@@ -2,7 +2,7 @@ import { driver, DriveStep } from 'driver.js'
 import 'driver.js/dist/driver.css'
 
 // Tour definitions for different pages/features
-export type TourType = 'welcome' | 'ambient' | 'file-transcription' | 'saved-sessions'
+export type TourType = 'welcome' | 'ambient' | 'file-transcription' | 'saved-sessions' | 'dictation' | 'search'
 
 // Welcome/Home page tour
 const welcomeTourSteps: DriveStep[] = [
@@ -43,7 +43,7 @@ const welcomeTourSteps: DriveStep[] = [
     element: '[data-tour="nav-saved-sessions"]',
     popover: {
       title: 'Saved Sessions',
-      description: 'View and manage your saved transcription sessions. You can store up to 5 sessions.',
+      description: 'View and manage your saved transcription sessions — no limit on how many you can keep.',
       side: 'bottom',
       align: 'start'
     }
@@ -210,7 +210,7 @@ const savedSessionsTourSteps: DriveStep[] = [
   {
     popover: {
       title: 'Saved Sessions',
-      description: 'This page shows all your saved transcription sessions. You can store up to 5 sessions per user.',
+      description: 'This page shows all your saved transcription sessions. There\'s no limit on how many you can keep.',
     }
   },
   {
@@ -239,14 +239,109 @@ const savedSessionsTourSteps: DriveStep[] = [
   },
   {
     popover: {
-      title: 'Storage Limit',
-      description: 'You can save up to 5 sessions. When the limit is reached, saving a new session automatically removes the oldest one.',
+      title: 'No Storage Limit',
+      description: 'Save as many sessions as you want — nothing gets automatically deleted. (Demo accounts are limited on how many times they can use each *feature*, not on how many sessions they can keep.)',
     }
   },
   {
     popover: {
       title: 'Getting Started',
       description: 'To save a session, complete a transcription in Ambient AI or File Transcription, generate a document, then click "Save Session".',
+    }
+  }
+]
+
+// Dictation page tour
+const dictationTourSteps: DriveStep[] = [
+  {
+    popover: {
+      title: 'Welcome to Dictation',
+      description: 'Dictate directly into a plain text buffer with your voice, using spoken commands to control formatting. Let\'s walk through it.',
+    }
+  },
+  {
+    element: '[data-tour="dictation-language"]',
+    popover: {
+      title: 'Step 1: Select Language',
+      description: 'Choose the language you\'ll be speaking.',
+      side: 'bottom',
+      align: 'start'
+    }
+  },
+  {
+    element: '[data-tour="dictation-microphone"]',
+    popover: {
+      title: 'Step 2: Select Microphone',
+      description: 'Choose your audio input device.',
+      side: 'bottom',
+      align: 'start'
+    }
+  },
+  {
+    element: '[data-tour="dictation-start"]',
+    popover: {
+      title: 'Step 3: Start Dictating',
+      description: 'Click to start. Your speech appears in the text area as you talk.',
+      side: 'right',
+      align: 'start'
+    }
+  },
+  {
+    popover: {
+      title: 'Step 4: Voice Commands',
+      description: 'Say "new line", "new paragraph", "bullet point", or "clear all" while dictating to control formatting hands-free — supported commands are listed on the page.',
+    }
+  },
+  {
+    popover: {
+      title: 'Step 5: Edit & Save',
+      description: 'You can also type or fix mistakes manually at any point. When you\'re done, save the session or generate a structured document from the text, just like the other transcription modes.',
+    }
+  },
+  {
+    popover: {
+      title: 'Ready to Try!',
+      description: 'Select your language and microphone, then click "Start Dictation" to begin.',
+    }
+  }
+]
+
+// Semantic Search page tour
+const searchTourSteps: DriveStep[] = [
+  {
+    popover: {
+      title: 'Welcome to Semantic Search',
+      description: 'Search across all your saved sessions by meaning, not just exact keywords — it understands what you\'re asking, not just what you typed.',
+    }
+  },
+  {
+    element: '[data-tour="search-query"]',
+    popover: {
+      title: 'Step 1: Describe What You\'re Looking For',
+      description: 'Type something like "patient with childhood asthma and night cough" — you don\'t need the exact words that appear in the session.',
+      side: 'bottom',
+      align: 'start'
+    }
+  },
+  {
+    element: '[data-tour="search-button"]',
+    popover: {
+      title: 'Step 2: Search',
+      description: 'Click Search (or press Enter). Results are ranked by how closely they match the meaning of your query, most relevant first.',
+      side: 'top',
+      align: 'center'
+    }
+  },
+  {
+    popover: {
+      title: 'Step 3: Review Results',
+      description: 'Each result shows which session it came from and the matching snippet. Click through to open the full session.',
+    }
+  },
+  {
+    popover: {
+      title: 'Ready to Try!',
+      description: 'Search only looks through your own saved sessions, so try it once you\'ve saved at least one.',
     }
   }
 ]
@@ -262,6 +357,10 @@ const getTourSteps = (tourType: TourType): DriveStep[] => {
       return fileTranscriptionTourSteps
     case 'saved-sessions':
       return savedSessionsTourSteps
+    case 'dictation':
+      return dictationTourSteps
+    case 'search':
+      return searchTourSteps
     default:
       return welcomeTourSteps
   }
@@ -285,7 +384,7 @@ export const resetTour = (tourType: TourType): void => {
 
 // Reset all tours
 export const resetAllTours = (): void => {
-  const tourTypes: TourType[] = ['welcome', 'ambient', 'file-transcription', 'saved-sessions']
+  const tourTypes: TourType[] = ['welcome', 'ambient', 'file-transcription', 'saved-sessions', 'dictation', 'search']
   tourTypes.forEach(type => resetTour(type))
 }
 

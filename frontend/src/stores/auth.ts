@@ -13,6 +13,11 @@ export interface User {
   granted_permissions?: string[]
   denied_permissions?: string[]
   isActive: boolean
+  // "pending" | "approved" | "rejected". While not "approved", permissions
+  // above is already empty (server-side, see backend auth.User.IsApproved)
+  // — this field is what the UI uses to decide which screen to show.
+  status: string
+  requestedRole?: string
   createdAt: string
   lastLogin?: string
 }
@@ -56,7 +61,19 @@ export function hasPermission(perm: string): boolean {
 }
 
 // Convenience computed aliases — kept for backward-compat with existing v-if bindings.
-export const isSuperUser = computed(() => hasPermission('users.manage'))
+export const isSuperUser  = computed(() => hasPermission('users.manage'))
+export const isApproved   = computed(() => user.value?.status === 'approved')
+export const isDemoAccount = computed(() => user.value?.roles?.includes('user') ?? false)
+
+// defaultLandingPath is the single source of truth for "where does an
+// approved user go after login" — a superuser's main job is running the
+// app (Command Center), everyone else's is the clinical work (My
+// Dashboard). Used by router.beforeEach and every page that redirects an
+// already-authenticated user (Login/Signup/PendingApproval), so all of
+// them agree.
+export function defaultLandingPath(): string {
+  return hasPermission('users.manage') ? '/command-center' : '/my-dashboard'
+}
 
 export const canAccessAmbient           = computed(() => hasPermission('ambient.access'))
 export const canAccessFileTranscription = computed(() => hasPermission('file_transcription.access'))
@@ -97,6 +114,7 @@ export interface SignupPayload {
   email: string
   password: string
   name: string
+  role: string
 }
 
 export async function signup(payload: SignupPayload): Promise<boolean> {
@@ -171,10 +189,40 @@ export function getAuthHeaders(): Record<string, string> {
   return headers
 }
 
+// DemoLimitError carries the 403 demoLimitReached response body so callers
+// can show its message directly rather than a generic failure.
+export class DemoLimitError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'DemoLimitError'
+  }
+}
+
 export function handleFetchResponse(response: Response): Response {
   if (response.status === 401) {
     handleSessionExpired('Your session has expired. Please log in again.')
     throw new Error('Session expired')
   }
   return response
+}
+
+// Like handleFetchResponse, but also surfaces a 403 demoLimitReached body as
+// a DemoLimitError with the backend's own message, instead of letting
+// callers fall through to a generic error later. Call sites that already
+// use handleFetchResponse should call this first (await response.clone().json()
+// isn't needed — this reads the body once and callers use the return value).
+export async function checkDemoLimit(response: Response): Promise<Response> {
+  if (response.status === 403) {
+    const clone = response.clone()
+    try {
+      const data = await clone.json()
+      if (data?.demoLimitReached) {
+        throw new DemoLimitError(data.error || "You've used all 3 free trials for this feature.")
+      }
+    } catch (e) {
+      if (e instanceof DemoLimitError) throw e
+      // Not JSON / not our shape — fall through, let the normal error path handle it.
+    }
+  }
+  return handleFetchResponse(response)
 }

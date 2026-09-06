@@ -97,6 +97,22 @@ func DefaultRoles() []*Role {
 			Permissions: []Permission{
 				PermAmbientAccess,
 				PermFileTranscription,
+				PermDictation,
+				PermClinicalFacts,
+				PermDocumentationView,
+				PermEmbeddedAssistant,
+			},
+		},
+		{
+			ID:          "admin",
+			Name:        "Admin",
+			Description: "Same access as Doctor",
+			IsSystem:    true,
+			CreatedAt:   now,
+			Permissions: []Permission{
+				PermAmbientAccess,
+				PermFileTranscription,
+				PermDictation,
 				PermClinicalFacts,
 				PermDocumentationView,
 				PermEmbeddedAssistant,
@@ -105,11 +121,15 @@ func DefaultRoles() []*Role {
 		{
 			ID:          "user",
 			Name:        "User",
-			Description: "Basic ambient access",
+			Description: "Demo/trial access — every feature is reachable but rate-limited to 3 lifetime uses each (internal/middleware.RequireDemoAllowance)",
 			IsSystem:    true,
 			CreatedAt:   now,
 			Permissions: []Permission{
 				PermAmbientAccess,
+				PermFileTranscription,
+				PermDictation,
+				PermClinicalFacts,
+				PermDocumentationView,
 				PermEmbeddedAssistant,
 			},
 		},
@@ -127,15 +147,39 @@ type User struct {
 	GrantedPerms []Permission `json:"granted_permissions"`
 	DeniedPerms  []Permission `json:"denied_permissions"`
 	IsActive     bool         `json:"isActive"`
-	CreatedAt    time.Time    `json:"createdAt"`
-	CreatedBy    string       `json:"createdBy,omitempty"`
-	LastLogin    time.Time    `json:"lastLogin,omitempty"`
+	// Status is "pending" | "approved" | "rejected". Self-signups start
+	// pending; admin-created accounts start approved (a superuser already
+	// made that call). While not approved, EffectivePermissions and
+	// GenerateToken both report zero permissions regardless of Roles — see
+	// IsApproved.
+	Status string `json:"status"`
+	// RequestedRole holds the role a pending signup asked for, since Roles
+	// stays empty until POST /users/:id/approve actually grants it.
+	RequestedRole string    `json:"requestedRole,omitempty"`
+	CreatedAt     time.Time `json:"createdAt"`
+	CreatedBy     string    `json:"createdBy,omitempty"`
+	LastLogin     time.Time `json:"lastLogin,omitempty"`
+}
+
+// IsApproved reports whether this account's real roles/permissions should
+// take effect. Checked by both GenerateToken (JWT claims) and ToResponse
+// (the JSON both frontends read to decide what UI to show) so a pending or
+// rejected account never sees or can exercise access it doesn't have yet,
+// even though its Roles/GrantedPerms are left untouched in storage.
+func (u *User) IsApproved() bool {
+	return u.Status == "approved"
 }
 
 // EffectivePermissions computes the final permission set:
 //
 //	role permissions + user grants - user denies
+//
+// Returns empty for a pending/rejected account regardless of Roles — see
+// IsApproved.
 func (u *User) EffectivePermissions(rolesMap map[string]*Role) []Permission {
+	if !u.IsApproved() {
+		return []Permission{}
+	}
 	effective := make(map[Permission]bool)
 	for _, id := range u.Roles {
 		if r, ok := rolesMap[id]; ok {
@@ -175,12 +219,15 @@ type LoginRequest struct {
 }
 
 // SignupRequest represents a public self-service account creation request.
-// Always creates the account with the "user" role.
+// The account is created pending — Role is only granted once a superuser
+// approves it (POST /api/users/:id/approve). Role must be "user", "doctor",
+// or "admin" — "superuser" can never be requested through signup.
 type SignupRequest struct {
 	Username string `json:"username"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
 	Name     string `json:"name"`
+	Role     string `json:"role"`
 }
 
 // LoginResponse represents a successful login response.
@@ -201,17 +248,19 @@ type CreateUserRequest struct {
 
 // UserResponse is the safe API representation of a user (no password hash).
 type UserResponse struct {
-	ID           string       `json:"id"`
-	Username     string       `json:"username"`
-	Email        string       `json:"email"`
-	Name         string       `json:"name"`
-	Roles        []string     `json:"roles"`
-	Permissions  []Permission `json:"permissions"`
-	GrantedPerms []Permission `json:"granted_permissions"`
-	DeniedPerms  []Permission `json:"denied_permissions"`
-	IsActive     bool         `json:"isActive"`
-	CreatedAt    time.Time    `json:"createdAt"`
-	LastLogin    time.Time    `json:"lastLogin,omitempty"`
+	ID            string       `json:"id"`
+	Username      string       `json:"username"`
+	Email         string       `json:"email"`
+	Name          string       `json:"name"`
+	Roles         []string     `json:"roles"`
+	Permissions   []Permission `json:"permissions"`
+	GrantedPerms  []Permission `json:"granted_permissions"`
+	DeniedPerms   []Permission `json:"denied_permissions"`
+	IsActive      bool         `json:"isActive"`
+	Status        string       `json:"status"`
+	RequestedRole string       `json:"requestedRole,omitempty"`
+	CreatedAt     time.Time    `json:"createdAt"`
+	LastLogin     time.Time    `json:"lastLogin,omitempty"`
 }
 
 // PermissionBreakdown is returned by GET /api/users/:id/permissions.
@@ -222,9 +271,12 @@ type PermissionBreakdown struct {
 	Denied     []Permission `json:"denied"`
 }
 
-// NewUser creates a new user with a generated (UUID) ID. Postgres storage
-// overwrites ID with a sequential value after calling this — see
-// pgstore.Store.CreateUser.
+// NewUser creates a new user with a generated (UUID) ID, status "approved"
+// (the default for the admin-created-user path — CreateUserRequest has no
+// approval concept). Postgres storage overwrites ID with a sequential value
+// after calling this — see pgstore.Store.CreateUser. Self-signup
+// (HandleSignup) builds its own User by hand instead, since it needs
+// status "pending" and RequestedRole rather than these defaults.
 func NewUser(username, email, passwordHash, name string, roles []string, createdBy string) *User {
 	if roles == nil {
 		roles = []string{}
@@ -239,6 +291,7 @@ func NewUser(username, email, passwordHash, name string, roles []string, created
 		GrantedPerms: []Permission{},
 		DeniedPerms:  []Permission{},
 		IsActive:     true,
+		Status:       "approved",
 		CreatedAt:    time.Now(),
 		CreatedBy:    createdBy,
 	}
@@ -259,16 +312,18 @@ func (u *User) ToResponse(rolesMap map[string]*Role) *UserResponse {
 		denied = []Permission{}
 	}
 	return &UserResponse{
-		ID:           u.ID,
-		Username:     u.Username,
-		Email:        u.Email,
-		Name:         u.Name,
-		Roles:        roles,
-		Permissions:  u.EffectivePermissions(rolesMap),
-		GrantedPerms: granted,
-		DeniedPerms:  denied,
-		IsActive:     u.IsActive,
-		CreatedAt:    u.CreatedAt,
-		LastLogin:    u.LastLogin,
+		ID:            u.ID,
+		Username:      u.Username,
+		Email:         u.Email,
+		Name:          u.Name,
+		Roles:         roles,
+		Permissions:   u.EffectivePermissions(rolesMap),
+		GrantedPerms:  granted,
+		DeniedPerms:   denied,
+		IsActive:      u.IsActive,
+		Status:        u.Status,
+		RequestedRole: u.RequestedRole,
+		CreatedAt:     u.CreatedAt,
+		LastLogin:     u.LastLogin,
 	}
 }

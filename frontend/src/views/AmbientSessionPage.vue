@@ -47,6 +47,12 @@
               data-tour="microphone-select"
             />
 
+            <DemoUsageBanner
+              feature="ambient"
+              label="Ambient Recording"
+              description="Records your voice live and transcribes it automatically."
+            />
+
             <!-- Recording Controls -->
             <div class="d-flex flex-column ga-3">
               <v-btn
@@ -91,6 +97,11 @@
             <p class="text-body-2 text-medium-emphasis mb-3">
               Select a template to generate a report from the transcript:
             </p>
+            <DemoUsageBanner
+              feature="document_generation"
+              label="Document Generation"
+              description="Turn a transcript into a structured clinical document."
+            />
             <ReportGenerator
               :templates="availableTemplates"
               v-model:selected-template="selectedTemplate"
@@ -150,6 +161,8 @@
                 :is-saving="isSaving"
                 :show-save-button="true"
                 :hide-title="true"
+                :document-title="sessionTitle || 'Ambient Session'"
+                :template-name="selectedTemplateName"
                 @save="saveCurrentSession"
               />
             </v-expansion-panel-text>
@@ -386,6 +399,7 @@ import TranscriptDisplay from '@/components/TranscriptDisplay.vue'
 import ReportGenerator from '@/components/ReportGenerator.vue'
 import GeneratedReportCard from '@/components/GeneratedReportCard.vue'
 import AiAssistantPanel from '@/components/AiAssistantPanel.vue'
+import DemoUsageBanner from '@/components/DemoUsageBanner.vue'
 import { useAmbientSession } from '@/composables/useAmbientSession'
 import { useAudioCapture } from '@/composables/useAudioCapture'
 import { canViewClinicalFacts, currentUser, isSuperUser } from '@/stores/auth'

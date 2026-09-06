@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { getAuthHeaders, handleFetchResponse } from '@/stores/auth'
+import { getAuthHeaders, checkDemoLimit, handleFetchResponse } from '@/stores/auth'
 
 // Helper to get auth headers without Content-Type for FormData
 const getAuthHeadersForFormData = (): Record<string, string> => {
@@ -83,8 +83,8 @@ export function useTranscription() {
         body: formData,
       })
 
-      // Handle session expiry (401)
-      handleFetchResponse(response)
+      // Handle session expiry (401) and demo-trial-limit (403)
+      await checkDemoLimit(response)
 
       const data: UploadResponse = await response.json()
 

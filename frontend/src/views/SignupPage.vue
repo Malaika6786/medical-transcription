@@ -64,9 +64,32 @@
             variant="outlined"
             :rules="[rules.required, rules.matchesPassword]"
             :disabled="authLoading"
-            class="mb-4"
+            class="mb-3"
             autocomplete="new-password"
           />
+
+          <v-select
+            v-model="role"
+            label="Account Type"
+            prepend-inner-icon="mdi-account-badge-outline"
+            variant="outlined"
+            :items="roleOptions"
+            item-title="label"
+            item-value="value"
+            :disabled="authLoading"
+            :hint="roleHint"
+            persistent-hint
+            class="mb-4"
+          />
+
+          <v-alert
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+          >
+            New accounts need approval from a superuser before they can sign in fully. You can still log in right after signing up to check your status.
+          </v-alert>
 
           <v-alert
             v-if="authError"
@@ -106,7 +129,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import AuthLayout from '@/components/AuthLayout.vue'
-import { signup, authError, authLoading, clearError } from '@/stores/auth'
+import { signup, authError, authLoading, clearError, currentUser, defaultLandingPath } from '@/stores/auth'
 
 const router = useRouter()
 
@@ -117,6 +140,20 @@ const password = ref('')
 const confirmPassword = ref('')
 const showPassword = ref(false)
 const formRef = ref()
+
+// "superuser" is deliberately not offered — that account is provisioned
+// once at seed time, never through self-signup (backend rejects it too).
+const role = ref('user')
+const roleOptions = [
+  { value: 'user', label: 'User (Demo / Trial)' },
+  { value: 'doctor', label: 'Doctor' },
+  { value: 'admin', label: 'Admin' },
+]
+const roleHint = computed(() => {
+  return role.value === 'user'
+    ? 'Try out the app with limited trial access to each feature.'
+    : 'Full access once a superuser approves your account.'
+})
 
 const rules = {
   required: (v: string) => !!v || 'This field is required',
@@ -142,9 +179,10 @@ const handleSignup = async () => {
     email: email.value,
     password: password.value,
     name: name.value,
+    role: role.value,
   })
   if (success) {
-    router.push('/ambient-session')
+    router.push(currentUser.value?.status === 'approved' ? defaultLandingPath() : '/pending-approval')
   }
 }
 </script>

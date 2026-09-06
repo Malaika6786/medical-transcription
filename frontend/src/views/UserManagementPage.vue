@@ -59,6 +59,15 @@
                   {{ item.isActive ? 'Active' : 'Inactive' }}
                 </v-chip>
               </template>
+              <template v-slot:item.status="{ item }">
+                <v-chip
+                  :color="item.status === 'approved' ? 'success' : item.status === 'rejected' ? 'error' : 'warning'"
+                  size="small"
+                  variant="tonal"
+                >
+                  {{ item.status === 'approved' ? 'Approved' : item.status === 'rejected' ? 'Rejected' : 'Pending' }}
+                </v-chip>
+              </template>
               <template v-slot:item.createdAt="{ item }">{{ formatDate(item.createdAt) }}</template>
               <template v-slot:item.lastLogin="{ item }">{{ item.lastLogin ? formatDate(item.lastLogin) : 'Never' }}</template>
               <template v-slot:item.actions="{ item }">
@@ -66,6 +75,14 @@
                   <v-btn icon variant="text" size="small" @click="editUser(item)" :disabled="item.id === currentUser?.id">
                     <v-icon icon="mdi-pencil" size="18" />
                     <v-tooltip activator="parent" location="top">Edit</v-tooltip>
+                  </v-btn>
+                  <v-btn icon variant="text" size="small" @click="router.push(`/user-dashboard/${item.id}`)">
+                    <v-icon icon="mdi-view-dashboard-outline" size="18" />
+                    <v-tooltip activator="parent" location="top">View Dashboard</v-tooltip>
+                  </v-btn>
+                  <v-btn icon variant="text" size="small" @click="openSessionsDialog(item)">
+                    <v-icon icon="mdi-folder-eye-outline" size="18" />
+                    <v-tooltip activator="parent" location="top">View Sessions</v-tooltip>
                   </v-btn>
                   <v-btn icon variant="text" size="small" @click="openPermissionsDialog(item)" :disabled="item.id === currentUser?.id">
                     <v-icon icon="mdi-shield-key" size="18" />
@@ -369,6 +386,43 @@
       </v-card>
     </v-dialog>
 
+    <!-- View Sessions Dialog (superuser: keep an eye on any user's activity) -->
+    <v-dialog v-model="showSessionsDialog" max-width="700">
+      <v-card class="glass-card">
+        <v-card-title class="d-flex align-center pa-4">
+          <v-icon icon="mdi-folder-eye-outline" class="mr-2" color="primary" />
+          Sessions — {{ sessionsUser?.name }}
+        </v-card-title>
+        <v-divider />
+        <v-card-text class="pa-4" style="max-height: 60vh; overflow-y: auto;">
+          <div v-if="sessionsLoading" class="text-center py-8">
+            <v-progress-circular indeterminate color="primary" />
+          </div>
+          <div v-else-if="sessionsList.length === 0" class="text-center py-8 text-medium-emphasis">
+            No saved sessions for this user.
+          </div>
+          <v-expansion-panels v-else variant="accordion">
+            <v-expansion-panel v-for="s in sessionsList" :key="s.id">
+              <v-expansion-panel-title>
+                <div>
+                  <div class="font-weight-medium">{{ s.title }}</div>
+                  <div class="text-caption text-medium-emphasis">{{ s.type }} · {{ formatDate(s.updatedAt) }}</div>
+                </div>
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <p class="text-body-2" style="white-space: pre-wrap;">{{ s.transcript }}</p>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+          </v-expansion-panels>
+        </v-card-text>
+        <v-divider />
+        <v-card-actions class="pa-4">
+          <v-spacer />
+          <v-btn variant="text" @click="showSessionsDialog = false">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-snackbar v-model="showSuccess" color="success" timeout="3000">{{ successMessage }}</v-snackbar>
     <v-snackbar v-model="showError" color="error" timeout="5000">
       {{ errorMessage }}
@@ -381,8 +435,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import api from '@/services/api'
 import { currentUser, logout } from '@/stores/auth'
+
+const router = useRouter()
 
 interface UserRecord {
   id: string
@@ -393,6 +450,8 @@ interface UserRecord {
   granted_permissions: string[]
   denied_permissions: string[]
   isActive: boolean
+  status: string
+  requestedRole?: string
   createdAt: string
   lastLogin?: string
 }
@@ -443,7 +502,7 @@ const newUser = ref({ name: '', email: '', password: '', roles: ['doctor'] as st
 const editingUser = ref<UserRecord>({
   id: '', email: '', name: '', roles: [], permissions: [],
   granted_permissions: [], denied_permissions: [],
-  isActive: true, createdAt: ''
+  isActive: true, status: 'approved', createdAt: ''
 })
 
 const deletingUser        = ref<UserRecord | null>(null)
@@ -455,11 +514,24 @@ const permBreakdown  = ref<PermissionBreakdown | null>(null)
 const grantPerm      = ref<string | null>(null)
 const denyPerm       = ref<string | null>(null)
 
+interface SessionSummary {
+  id: string
+  title: string
+  type: string
+  transcript: string
+  updatedAt: string
+}
+const showSessionsDialog = ref(false)
+const sessionsUser  = ref<UserRecord | null>(null)
+const sessionsList  = ref<SessionSummary[]>([])
+const sessionsLoading = ref(false)
+
 const headers = [
   { title: 'Name',       key: 'name',      sortable: true },
   { title: 'Email',      key: 'email',     sortable: true },
   { title: 'Roles',      key: 'roles',     sortable: false },
-  { title: 'Status',     key: 'isActive',  sortable: true },
+  { title: 'Active',     key: 'isActive',  sortable: true },
+  { title: 'Approval',   key: 'status',    sortable: true },
   { title: 'Created',    key: 'createdAt', sortable: true },
   { title: 'Last Login', key: 'lastLogin', sortable: true },
   { title: 'Actions',    key: 'actions',   sortable: false, align: 'center' as const },
@@ -492,6 +564,23 @@ const formatDate = (dateStr: string) => {
     year: 'numeric', month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit'
   })
+}
+
+const openSessionsDialog = async (item: UserRecord) => {
+  sessionsUser.value = item
+  showSessionsDialog.value = true
+  sessionsLoading.value = true
+  sessionsList.value = []
+  try {
+    const response = await api.get(`/admin/sessions/${item.id}`)
+    sessionsList.value = response.data.sessions || []
+  } catch (err: any) {
+    errorMessage.value = err.response?.data?.error || 'Failed to load sessions'
+    showError.value = true
+    showSessionsDialog.value = false
+  } finally {
+    sessionsLoading.value = false
+  }
 }
 
 const fetchUsers = async () => {

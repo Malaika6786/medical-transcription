@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { getAuthHeaders, handleFetchResponse } from '@/stores/auth'
+import { getAuthHeaders, checkDemoLimit, handleFetchResponse } from '@/stores/auth'
 
 /** Structured clinical extraction returned by /api/ai/summarize (team schema). */
 export interface AiExtraction {
@@ -74,7 +74,7 @@ export function useAiAssistant() {
         body: JSON.stringify({ transcript, language }),
       })
 
-      handleFetchResponse(response)
+      await checkDemoLimit(response)
 
       const data = await response.json()
       if (!response.ok || !data.success) {

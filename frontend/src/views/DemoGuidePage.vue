@@ -73,6 +73,14 @@
               </ul>
             </v-alert>
 
+            <!-- Demo trial banner - shown only to the demo ("User") role -->
+            <v-alert v-if="isDemoAccount" type="info" variant="tonal" class="mb-4">
+              <strong>You're on a demo account.</strong> Every feature below is fully unlocked so you can
+              try it for real — each one just gives you <strong>3 free uses</strong>, forever (it doesn't
+              reset). Once you've used all 3 tries of a feature, ask a superuser to upgrade your account
+              for unlimited access.
+            </v-alert>
+
             <!-- User Roles Table - Super User Only -->
             <template v-if="isSuperUser">
               <h3 class="text-h6 mb-3">User Roles</h3>
@@ -80,36 +88,45 @@
                 <thead>
                   <tr>
                     <th>Role</th>
-                    <th>Ambient AI</th>
-                    <th>File Transcription</th>
-                    <th>Dictation</th>
+                    <th>Ambient / File / Dictation / AI / Search</th>
                     <th>Admin Features</th>
+                    <th>Approval Needed</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td><v-chip size="small" color="info">User</v-chip></td>
-                    <td><v-icon icon="mdi-check" color="success" /></td>
+                    <td><v-chip size="small" color="info">User (Demo)</v-chip></td>
+                    <td>
+                      <v-icon icon="mdi-check" color="success" />
+                      <span class="text-caption text-medium-emphasis ml-1">(3 free uses each, forever)</span>
+                    </td>
                     <td><v-icon icon="mdi-close" color="error" /></td>
-                    <td><v-icon icon="mdi-close" color="error" /></td>
-                    <td><v-icon icon="mdi-close" color="error" /></td>
+                    <td><v-icon icon="mdi-check" color="warning" /></td>
                   </tr>
                   <tr>
                     <td><v-chip size="small" color="secondary">Doctor</v-chip></td>
                     <td><v-icon icon="mdi-check" color="success" /></td>
-                    <td><v-icon icon="mdi-check" color="success" /></td>
                     <td><v-icon icon="mdi-close" color="error" /></td>
-                    <td><v-icon icon="mdi-close" color="error" /></td>
+                    <td><v-icon icon="mdi-check" color="warning" /></td>
                   </tr>
                   <tr>
-                    <td><v-chip size="small" color="primary">Super Admin</v-chip></td>
+                    <td><v-chip size="small" color="secondary">Admin</v-chip></td>
+                    <td><v-icon icon="mdi-check" color="success" /></td>
+                    <td><v-icon icon="mdi-close" color="error" /></td>
+                    <td><v-icon icon="mdi-check" color="warning" /></td>
+                  </tr>
+                  <tr>
+                    <td><v-chip size="small" color="primary">Superuser</v-chip></td>
                     <td><v-icon icon="mdi-check" color="success" /></td>
                     <td><v-icon icon="mdi-check" color="success" /></td>
-                    <td><v-icon icon="mdi-check" color="success" /></td>
-                    <td><v-icon icon="mdi-check" color="success" /></td>
+                    <td><span class="text-caption text-medium-emphasis">— (the one seeded account)</span></td>
                   </tr>
                 </tbody>
               </v-table>
+              <p class="text-caption text-medium-emphasis mt-2">
+                Admin and Doctor currently have identical access — that's deliberate, not a bug. Every new
+                signup (any role) needs your approval on the <RouterLink to="/pending-users">Pending Approvals</RouterLink> page before it does anything.
+              </p>
             </template>
           </v-card-text>
         </v-card>
@@ -145,7 +162,8 @@
                     <li>Click <strong>"Start New Recording"</strong> to begin capturing audio</li>
                   </ol>
                   <v-alert type="warning" variant="tonal" density="compact" class="mt-3">
-                    Ensure your browser has microphone permissions enabled. If you have 5 saved sessions, you'll be prompted to manage them first.
+                    Ensure your browser has microphone permissions enabled.
+                    <span v-if="isDemoAccount">Demo accounts get 3 free ambient sessions, forever.</span>
                   </v-alert>
                 </v-expansion-panel-text>
               </v-expansion-panel>
@@ -219,8 +237,8 @@
                     <li>Select the audio language</li>
                     <li>Click <strong>"Start Transcription"</strong></li>
                   </ol>
-                  <v-alert type="warning" variant="tonal" density="compact" class="mt-3">
-                    If you have 5 saved sessions, you'll be prompted to manage them before starting.
+                  <v-alert v-if="isDemoAccount" type="warning" variant="tonal" density="compact" class="mt-3">
+                    Demo accounts get 3 free file transcriptions, forever.
                   </v-alert>
                 </v-expansion-panel-text>
               </v-expansion-panel>
@@ -259,6 +277,197 @@
             <v-btn color="primary" variant="tonal" to="/async-transcription">
               <v-icon icon="mdi-arrow-right" class="mr-2" />
               Try File Transcription
+            </v-btn>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- Dictation Section -->
+    <v-row v-if="canAccessDictation" class="mb-6" id="dictation">
+      <v-col cols="12">
+        <v-card class="glass-card">
+          <v-card-title class="text-h5">
+            <v-icon icon="mdi-microphone-message" class="mr-2" color="secondary" />
+            Dictation
+          </v-card-title>
+          <v-card-text>
+            <p class="text-body-1 mb-4">
+              Dictate directly into a plain text buffer using your voice, with spoken commands for
+              formatting — closer to traditional medical dictation than a live conversation transcript.
+            </p>
+
+            <v-expansion-panels variant="accordion" class="mb-4">
+              <v-expansion-panel>
+                <v-expansion-panel-title>
+                  <v-icon icon="mdi-numeric-1-circle" class="mr-2" color="primary" />
+                  <strong>Step 1: Start Dictating</strong>
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <ol class="ml-4">
+                    <li>Navigate to <strong>Dictation</strong> from the navigation menu</li>
+                    <li>Select your language and microphone</li>
+                    <li>Click <strong>"Start Dictation"</strong> and begin speaking</li>
+                  </ol>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+
+              <v-expansion-panel>
+                <v-expansion-panel-title>
+                  <v-icon icon="mdi-numeric-2-circle" class="mr-2" color="primary" />
+                  <strong>Step 2: Use Voice Commands</strong>
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <p class="text-body-2 mb-2">Say these commands naturally while dictating:</p>
+                  <ul class="ml-4">
+                    <li><strong>"New line"</strong> / <strong>"New paragraph"</strong> — formatting breaks</li>
+                    <li><strong>"Bullet point"</strong> — starts a bulleted line</li>
+                    <li><strong>"Clear all"</strong> — wipes the current text and starts over</li>
+                  </ul>
+                  <v-alert type="info" variant="tonal" density="compact" class="mt-3">
+                    Advanced commands (template insertion, section navigation, undo/redo) shown in the app
+                    on the desktop web version are a preview of a larger command set still being rolled out.
+                  </v-alert>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+
+              <v-expansion-panel>
+                <v-expansion-panel-title>
+                  <v-icon icon="mdi-numeric-3-circle" class="mr-2" color="primary" />
+                  <strong>Step 3: Edit, Generate & Save</strong>
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <ul class="ml-4">
+                    <li>Type or correct text manually at any time — dictation doesn't lock the field</li>
+                    <li>Generate a structured clinical document from the text, same as other modes</li>
+                    <li>Save the session for future reference</li>
+                  </ul>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
+
+            <v-btn color="secondary" variant="tonal" to="/dictation">
+              <v-icon icon="mdi-arrow-right" class="mr-2" />
+              Try Dictation
+            </v-btn>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- AI Summary Section -->
+    <v-row class="mb-6" id="ai-summary">
+      <v-col cols="12">
+        <v-card class="glass-card">
+          <v-card-title class="text-h5">
+            <v-icon icon="mdi-robot-outline" class="mr-2" color="secondary" />
+            AI Summary & Chat
+          </v-card-title>
+          <v-card-text>
+            <p class="text-body-1 mb-4">
+              Once a recording ends, the AI Assistant extracts a structured 15-field clinical summary
+              (chief complaint, diagnosis, medications, follow-up, and more) and lets you ask grounded
+              follow-up questions about the conversation.
+            </p>
+
+            <v-expansion-panels variant="accordion" class="mb-4">
+              <v-expansion-panel>
+                <v-expansion-panel-title>
+                  <v-icon icon="mdi-numeric-1-circle" class="mr-2" color="primary" />
+                  <strong>Step 1: Finish a Recording</strong>
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <ol class="ml-4">
+                    <li>Complete an <strong>Ambient AI</strong> session and stop recording</li>
+                    <li>Click <strong>"AI Assistance"</strong> where it appears after the session ends</li>
+                  </ol>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+
+              <v-expansion-panel>
+                <v-expansion-panel-title>
+                  <v-icon icon="mdi-numeric-2-circle" class="mr-2" color="primary" />
+                  <strong>Step 2: Review the Extraction</strong>
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <ul class="ml-4">
+                    <li>The summary generates automatically — no button to click, it just runs</li>
+                    <li>Review the structured fields: summary, chief complaint, diagnosis, medications, and more</li>
+                  </ul>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+
+              <v-expansion-panel>
+                <v-expansion-panel-title>
+                  <v-icon icon="mdi-numeric-3-circle" class="mr-2" color="primary" />
+                  <strong>Step 3: Ask Follow-Up Questions</strong>
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <ul class="ml-4">
+                    <li>Type a question about the conversation in the chat box</li>
+                    <li>Answers are grounded strictly in this conversation's extracted record</li>
+                    <li>Always verify AI-generated content clinically before relying on it</li>
+                  </ul>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
+
+            <v-btn color="secondary" variant="tonal" to="/ambient-session" v-if="canAccessAmbient">
+              <v-icon icon="mdi-arrow-right" class="mr-2" />
+              Try Ambient AI to Access AI Summary
+            </v-btn>
+          </v-card-text>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- Semantic Search Section -->
+    <v-row class="mb-6" id="search">
+      <v-col cols="12">
+        <v-card class="glass-card">
+          <v-card-title class="text-h5">
+            <v-icon icon="mdi-text-search" class="mr-2" color="primary" />
+            Semantic Search
+          </v-card-title>
+          <v-card-text>
+            <p class="text-body-1 mb-4">
+              Search across your saved sessions by meaning, not just exact keywords — it understands what
+              you're asking about, ranking results by how closely they match.
+            </p>
+
+            <v-expansion-panels variant="accordion" class="mb-4">
+              <v-expansion-panel>
+                <v-expansion-panel-title>
+                  <v-icon icon="mdi-numeric-1-circle" class="mr-2" color="primary" />
+                  <strong>Step 1: Describe What You're Looking For</strong>
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <ol class="ml-4">
+                    <li>Navigate to <strong>Semantic Search</strong> from the menu</li>
+                    <li>Type a description, e.g. "patient with childhood asthma and night cough"</li>
+                    <li>You don't need the exact wording used in the session</li>
+                  </ol>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+
+              <v-expansion-panel>
+                <v-expansion-panel-title>
+                  <v-icon icon="mdi-numeric-2-circle" class="mr-2" color="primary" />
+                  <strong>Step 2: Review Ranked Results</strong>
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <ul class="ml-4">
+                    <li>Results are ranked by similarity, most relevant first</li>
+                    <li>Only your own saved sessions are searched</li>
+                    <li>Click a result to open the full session</li>
+                  </ul>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
+
+            <v-btn color="primary" variant="tonal" to="/search">
+              <v-icon icon="mdi-arrow-right" class="mr-2" />
+              Try Semantic Search
             </v-btn>
           </v-card-text>
         </v-card>
@@ -388,8 +597,8 @@
           </v-card-title>
           <v-card-text>
             <p class="text-body-1 mb-4">
-              Save and manage your transcription sessions for future reference. Each user can 
-              store up to 5 sessions.
+              Save and manage your transcription sessions for future reference — there's no limit on how
+              many you can keep.
             </p>
 
             <v-row class="mb-4">
@@ -397,7 +606,7 @@
                 <v-card variant="tonal" color="primary" class="text-center pa-4">
                   <v-icon icon="mdi-content-save" size="48" class="mb-2" />
                   <h4 class="text-subtitle-1 font-weight-bold">Save Sessions</h4>
-                  <p class="text-body-2 mb-0">Store transcripts and documents (max 5)</p>
+                  <p class="text-body-2 mb-0">Store as many transcripts and documents as you need</p>
                 </v-card>
               </v-col>
               <v-col cols="12" md="4">
@@ -483,7 +692,7 @@
                       <v-icon icon="mdi-content-save" color="secondary" />
                     </template>
                     <v-list-item-title>Manage saved sessions</v-list-item-title>
-                    <v-list-item-subtitle>Max 5 per user, delete old ones to continue</v-list-item-subtitle>
+                    <v-list-item-subtitle>No limit — delete old ones anytime just to stay tidy</v-list-item-subtitle>
                   </v-list-item>
                 </v-list>
               </v-col>
@@ -560,8 +769,8 @@
               </v-col>
 
               <v-col cols="12" sm="6" md="3">
-                <v-card 
-                  variant="outlined" 
+                <v-card
+                  variant="outlined"
                   class="text-center pa-4 h-100 tour-card"
                   hover
                   @click="launchTour('saved-sessions')"
@@ -570,6 +779,40 @@
                   <h4 class="text-subtitle-1 font-weight-bold">Sessions Tour</h4>
                   <p class="text-body-2 text-medium-emphasis mb-3">Manage saved work</p>
                   <v-btn color="success" size="small" variant="tonal">
+                    <v-icon icon="mdi-play" class="mr-1" />
+                    Start
+                  </v-btn>
+                </v-card>
+              </v-col>
+
+              <v-col v-if="canAccessDictation" cols="12" sm="6" md="3">
+                <v-card
+                  variant="outlined"
+                  class="text-center pa-4 h-100 tour-card"
+                  hover
+                  @click="launchTour('dictation')"
+                >
+                  <v-icon icon="mdi-microphone-message" size="40" color="secondary" class="mb-2" />
+                  <h4 class="text-subtitle-1 font-weight-bold">Dictation Tour</h4>
+                  <p class="text-body-2 text-medium-emphasis mb-3">Voice-to-text with commands</p>
+                  <v-btn color="secondary" size="small" variant="tonal">
+                    <v-icon icon="mdi-play" class="mr-1" />
+                    Start
+                  </v-btn>
+                </v-card>
+              </v-col>
+
+              <v-col cols="12" sm="6" md="3">
+                <v-card
+                  variant="outlined"
+                  class="text-center pa-4 h-100 tour-card"
+                  hover
+                  @click="launchTour('search')"
+                >
+                  <v-icon icon="mdi-text-search" size="40" color="primary" class="mb-2" />
+                  <h4 class="text-subtitle-1 font-weight-bold">Search Tour</h4>
+                  <p class="text-body-2 text-medium-emphasis mb-3">Find sessions by meaning</p>
+                  <v-btn color="primary" size="small" variant="tonal">
                     <v-icon icon="mdi-play" class="mr-1" />
                     Start
                   </v-btn>
@@ -613,7 +856,7 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { canAccessAmbient, canAccessFileTranscription, isSuperUser } from '@/stores/auth'
+import { canAccessAmbient, canAccessFileTranscription, canAccessDictation, isSuperUser, isDemoAccount } from '@/stores/auth'
 import { useProductTour, type TourType, resetAllTours } from '@/composables/useProductTour'
 
 const router = useRouter()
@@ -626,6 +869,9 @@ const allSections = [
   { id: 'overview', title: 'Overview', icon: 'mdi-information-outline', permission: null },
   { id: 'ambient', title: 'Ambient AI', icon: 'mdi-broadcast', permission: null },
   { id: 'file-transcription', title: 'File Transcription', icon: 'mdi-file-upload', permission: 'fileTranscription' },
+  { id: 'dictation', title: 'Dictation', icon: 'mdi-microphone-message', permission: 'dictation' },
+  { id: 'ai-summary', title: 'AI Summary', icon: 'mdi-robot-outline', permission: null },
+  { id: 'search', title: 'Semantic Search', icon: 'mdi-text-search', permission: null },
   { id: 'templates', title: 'Templates', icon: 'mdi-file-document-multiple', permission: null },
   { id: 'sessions', title: 'Sessions', icon: 'mdi-content-save-all', permission: null },
   { id: 'tours', title: 'Interactive Tours', icon: 'mdi-cursor-default-click', permission: null },
@@ -634,10 +880,11 @@ const allSections = [
 ]
 
 // Filter sections based on user permissions
-const sections = computed(() => 
+const sections = computed(() =>
   allSections.filter(section => {
     if (!section.permission) return true
     if (section.permission === 'fileTranscription') return canAccessFileTranscription.value
+    if (section.permission === 'dictation') return canAccessDictation.value
     return true
   })
 )
@@ -655,7 +902,9 @@ const launchTour = (tourType: TourType) => {
     'welcome': '/home',
     'ambient': '/ambient-session',
     'file-transcription': '/async-transcription',
-    'saved-sessions': '/saved-sessions'
+    'saved-sessions': '/saved-sessions',
+    'dictation': '/dictation',
+    'search': '/search'
   }
   
   const targetRoute = routeMap[tourType]

@@ -1,4 +1,5 @@
 import { ref, onUnmounted } from 'vue'
+import { authToken } from '@/stores/auth'
 
 /**
  * Dictation Composable
@@ -60,9 +61,12 @@ export function useDictation() {
     credits.value = 0
 
     try {
-      // Connect directly to WebSocket (no interaction needed for dictation)
+      // Connect directly to WebSocket (no interaction needed for dictation).
+      // The token travels as a query param, not a header — browsers can't
+      // set custom headers during a WS handshake (see backend
+      // AuthMiddlewareAllowQueryToken's doc comment for the full reasoning).
       const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-      const wsUrl = `${wsProtocol}//${window.location.host}/api/dictation/ws?language=${encodeURIComponent(language)}`
+      const wsUrl = `${wsProtocol}//${window.location.host}/api/dictation/ws?language=${encodeURIComponent(language)}&token=${encodeURIComponent(authToken.value || '')}`
 
       console.log('Connecting to Dictation WebSocket:', wsUrl)
       await connectWebSocket(wsUrl)

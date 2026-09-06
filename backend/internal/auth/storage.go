@@ -1,16 +1,24 @@
 package auth
 
-// Storage contracts implemented by both the JSON-file stores (kept for tests
-// and as the source read by cmd/migrate-json) and the Postgres stores in
-// internal/pgstore, which are what the server runs on (see docs/adr/0001).
+// Storage contracts implemented by internal/pgstore, which is what the
+// server runs on (see docs/adr/0001).
 
 // UserStorage is the user-persistence contract used by handlers.
 type UserStorage interface {
 	Authenticate(login, password string) (*User, error)
 	CreateUser(username, email, password, name string, roles []string, createdBy string) (*User, error)
+	// CreateSignupUser is the self-service signup path: no roles are
+	// granted yet, status is "pending" until ApproveUser is called.
+	CreateSignupUser(username, email, password, name, requestedRole, createdBy string) (*User, error)
 	GetUserByEmail(email string) (*User, error)
 	GetUserByID(id string) (*User, error)
 	ListUsers() []*User
+	// ListPendingUsers returns accounts awaiting superuser approval.
+	ListPendingUsers() []*User
+	// ApproveUser grants a pending account its requested role and flips it
+	// to approved. RejectUser flips it to rejected without granting access.
+	ApproveUser(id string) (*User, error)
+	RejectUser(id string) (*User, error)
 	UpdateUser(id, name string, isActive bool) (*User, error)
 	UpdateUserRoles(id string, roles []string) (*User, error)
 	GrantPermission(id string, p Permission) (*User, error)

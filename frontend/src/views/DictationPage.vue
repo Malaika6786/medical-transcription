@@ -240,6 +240,7 @@
               :disabled="isStreaming"
               prepend-inner-icon="mdi-translate"
               class="mb-4"
+              data-tour="dictation-language"
             />
 
             <!-- Microphone Selection -->
@@ -252,6 +253,13 @@
               :disabled="isStreaming"
               prepend-inner-icon="mdi-microphone"
               class="mb-4"
+              data-tour="dictation-microphone"
+            />
+
+            <DemoUsageBanner
+              feature="dictation"
+              label="Dictation"
+              description="Live voice-to-text with commands like new line and bullet point."
             />
 
             <!-- Recording Controls -->
@@ -263,6 +271,7 @@
                 color="primary"
                 :loading="isConnecting"
                 @click="startDictation"
+                data-tour="dictation-start"
               >
                 <v-icon icon="mdi-record" class="mr-2" />
                 Start Dictation
@@ -767,6 +776,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useDictation } from '@/composables/useDictation'
 import { useAudioCapture } from '@/composables/useAudioCapture'
+import DemoUsageBanner from '@/components/DemoUsageBanner.vue'
 
 const {
   isConnecting,

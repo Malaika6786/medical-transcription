@@ -87,7 +87,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AuthLayout from '@/components/AuthLayout.vue'
-import { login, authError, authLoading, clearError } from '@/stores/auth'
+import { login, authError, authLoading, clearError, defaultLandingPath } from '@/stores/auth'
 
 const router = useRouter()
 const route = useRoute()
@@ -131,9 +131,10 @@ const handleLogin = async () => {
 
   const success = await login(loginId.value, password.value)
   if (success) {
-    // Check if there was a redirect path, otherwise go to ambient session
+    // Check if there was a redirect path, otherwise land on the
+    // role-appropriate dashboard.
     const redirectPath = route.query.redirect as string
-    router.push(redirectPath || '/ambient-session')
+    router.push(redirectPath || defaultLandingPath())
   }
 }
 </script>

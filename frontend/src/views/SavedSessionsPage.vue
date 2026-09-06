@@ -203,16 +203,23 @@
                   Regenerate
                 </v-btn>
               </div>
-              <v-btn 
-                icon 
-                variant="text" 
-                size="small" 
-                color="primary"
-                @click="saveDocumentEdit"
-              >
-                <v-icon icon="mdi-content-save" />
-                <v-tooltip activator="parent" location="left">Save</v-tooltip>
-              </v-btn>
+              <div class="d-flex align-center ga-1">
+                <DocumentExportButtons
+                  :html="editableDocument"
+                  :title="selectedSession.title || 'Saved Session'"
+                  :template-name="availableTemplates.find(t => t.key === selectedSession?.document?.templateKey)?.name"
+                />
+                <v-btn
+                  icon
+                  variant="text"
+                  size="small"
+                  color="primary"
+                  @click="saveDocumentEdit"
+                >
+                  <v-icon icon="mdi-content-save" />
+                  <v-tooltip activator="parent" location="left">Save</v-tooltip>
+                </v-btn>
+              </div>
             </div>
           </template>
 
@@ -407,6 +414,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { onBeforeRouteLeave, useRoute } from 'vue-router'
 import RichTextEditor from '@/components/RichTextEditor.vue'
+import DocumentExportButtons from '@/components/DocumentExportButtons.vue'
 import AiAssistantPanel from '@/components/AiAssistantPanel.vue'
 import { 
   userSessions, 

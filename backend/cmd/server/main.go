@@ -101,6 +101,7 @@ func main() {
 	rolesHandler := handlers.NewRolesHandler(roleStore, userStore)
 	sessionsHandler := handlers.NewSessionsHandler(sessionStore, embedWorker)
 	searchHandler := handlers.NewSearchHandler(store, embedder)
+	adminHandler := handlers.NewAdminHandler(userStore, roleStore, sessionStore, store)
 
 	// Initialize Corti clients
 	tokenManager := corti.NewTokenManager(config)
@@ -135,7 +136,7 @@ func main() {
 	)
 
 	// Setup routes
-	setupRoutes(app, authHandler, rolesHandler, asyncHandler, ambientHandler, dictationHandler, sessionsHandler, embeddedHandler, aiHandler, searchHandler)
+	setupRoutes(app, authHandler, rolesHandler, asyncHandler, ambientHandler, dictationHandler, sessionsHandler, embeddedHandler, aiHandler, searchHandler, adminHandler, store)
 
 	// Health check endpoint
 	app.Get("/health", func(c *fiber.Ctx) error {
@@ -179,24 +180,42 @@ func setupRoutes(
 	embeddedHandler *handlers.EmbeddedHandler,
 	aiHandler *handlers.AIHandler,
 	searchHandler *handlers.SearchHandler,
+	adminHandler *handlers.AdminHandler,
+	store *pgstore.Store,
 ) {
 	api := app.Group("/api")
 
 	// Convenience alias for the permission middleware factory.
 	requirePerm := middleware.RequirePermission
+	// Convenience alias for the demo-trial-limit middleware factory —
+	// applied per-route below, only on the specific action that "uses" a
+	// feature (not e.g. polling/read routes in the same group).
+	requireDemoAllowance := func(feature string) fiber.Handler {
+		return middleware.RequireDemoAllowance(store, feature)
+	}
 
 	// Auth middleware used on every protected route.
 	authMW := authHandler.AuthMiddleware()
+	// Dictation's WS has no prior REST call to gate it the way ambient's
+	// interactionId does (see below) — it needs real authentication, but
+	// browsers can't send an Authorization header during a WS handshake,
+	// so it accepts the token via ?token= instead. See the doc comment on
+	// AuthMiddlewareAllowQueryToken.
+	wsAuthMW := authHandler.AuthMiddlewareAllowQueryToken()
 
 	// ============================================
-	// WebSocket Routes (PUBLIC — must be registered first)
-	// Browsers cannot send Authorization headers during WS handshake.
-	// Security relies on the interactionId being obtained via a protected REST call.
+	// WebSocket Routes (registered before their group's other routes)
 	// ============================================
+	// Ambient: PUBLIC upgrade — security relies on the interactionId being
+	// obtained via a protected REST call (POST /ambient/start) first;
+	// that's where ambient's own auth/permission/demo-limit checks live.
 	api.Use("/ambient/ws/:interactionId", ambientHandler.HandleWebSocketUpgrade())
 	api.Get("/ambient/ws/:interactionId", ambientHandler.HandleWebSocket())
+	// Dictation: unlike ambient, there's no prior REST call — the WS
+	// connection *is* the start of the session, so auth/permission/demo-
+	// limit all have to be checked right here.
 	api.Use("/dictation/ws", dictationHandler.HandleWebSocketUpgrade())
-	api.Get("/dictation/ws", dictationHandler.HandleWebSocket())
+	api.Get("/dictation/ws", wsAuthMW, requirePerm(auth.PermDictation), requireDemoAllowance("dictation"), dictationHandler.HandleWebSocket())
 
 	// ============================================
 	// Authentication (Public + protected)
@@ -206,6 +225,20 @@ func setupRoutes(
 	authGroup.Post("/signup", authHandler.HandleSignup)
 	authGroup.Get("/me", authMW, authHandler.HandleGetCurrentUser)
 	authGroup.Post("/force-logout-all", authMW, requirePerm(auth.PermUsersManage), authHandler.HandleForceLogoutAll)
+
+	// A demo account's own trial-usage counts — any authenticated user (a
+	// non-demo account just gets empty counts back).
+	api.Get("/users/me/demo-usage", authMW, adminHandler.HandleGetMyDemoUsage)
+
+	// Superuser: view any user's saved sessions ("keep an eye on all the
+	// activity happening in the app").
+	api.Get("/admin/sessions/:userId", authMW, requirePerm(auth.PermUsersManage), adminHandler.HandleGetUserSessions)
+
+	// Command Center analytics (requires users.manage).
+	api.Get("/admin/analytics/overview", authMW, requirePerm(auth.PermUsersManage), adminHandler.HandleGetAnalyticsOverview)
+	api.Get("/admin/analytics/usage-timeseries", authMW, requirePerm(auth.PermUsersManage), adminHandler.HandleGetUsageTimeseries)
+	api.Get("/admin/analytics/demo-funnel", authMW, requirePerm(auth.PermUsersManage), adminHandler.HandleGetDemoFunnel)
+	api.Get("/admin/analytics/recent-sessions", authMW, requirePerm(auth.PermUsersManage), adminHandler.HandleGetRecentSessionsAllUsers)
 
 	// ============================================
 	// User Management  (requires users.manage)
@@ -224,6 +257,11 @@ func setupRoutes(
 	users.Delete("/:id/permissions/:perm", authHandler.HandleRemovePermissionOverride)
 	users.Put("/:id/password", authHandler.HandleResetPassword)
 
+	// Signup-approval workflow (requires users.manage).
+	users.Get("/pending", adminHandler.HandleListPendingUsers)
+	users.Post("/:id/approve", adminHandler.HandleApproveUser)
+	users.Post("/:id/reject", adminHandler.HandleRejectUser)
+
 	// ============================================
 	// Role Management  (requires users.manage)
 	// ============================================
@@ -241,10 +279,10 @@ func setupRoutes(
 	// Async Transcription  (requires file_transcription.access)
 	// ============================================
 	transcribe := api.Group("/transcribe", authMW, requirePerm(auth.PermFileTranscription))
-	transcribe.Post("/upload", asyncHandler.HandleUpload)
+	transcribe.Post("/upload", requireDemoAllowance("file_transcription"), asyncHandler.HandleUpload)
 	transcribe.Get("/:interactionId", asyncHandler.HandleGetTranscript)
 	transcribe.Get("/:interactionId/poll", asyncHandler.HandlePollTranscript)
-	transcribe.Post("/:interactionId/document", asyncHandler.HandleGenerateDocument)
+	transcribe.Post("/:interactionId/document", requireDemoAllowance("document_generation"), asyncHandler.HandleGenerateDocument)
 	transcribe.Get("/:interactionId/document/:documentId", asyncHandler.HandleGetDocument)
 	transcribe.Get("/:interactionId/documents", asyncHandler.HandleListDocuments)
 	transcribe.Post("/generate-from-transcript", asyncHandler.GenerateFromTranscript)
@@ -270,7 +308,7 @@ func setupRoutes(
 	// Ambient Streaming  (requires ambient.access)
 	// ============================================
 	ambient := api.Group("/ambient", authMW, requirePerm(auth.PermAmbientAccess))
-	ambient.Post("/start", ambientHandler.HandleStartSession)
+	ambient.Post("/start", requireDemoAllowance("ambient"), ambientHandler.HandleStartSession)
 	ambient.Get("/session/:interactionId", ambientHandler.HandleGetSessionStatus)
 	ambient.Get("/stats", ambientHandler.HandleGetStats)
 
@@ -290,7 +328,7 @@ func setupRoutes(
 	// ai_assistant.access permission when the RBAC granularity is needed)
 	// ============================================
 	aiGroup := api.Group("/ai", authMW, requirePerm(auth.PermAmbientAccess))
-	aiGroup.Post("/summarize", aiHandler.HandleSummarize)
+	aiGroup.Post("/summarize", requireDemoAllowance("ai_summary"), aiHandler.HandleSummarize)
 	aiGroup.Post("/chat", aiHandler.HandleChat)
 	aiGroup.Get("/status", aiHandler.HandleStatus)
 
@@ -308,7 +346,7 @@ func setupRoutes(
 	// Semantic Search  (any authenticated user — results are scoped to the
 	// caller's own sessions inside the SQL)
 	// ============================================
-	api.Post("/search", authMW, searchHandler.HandleSearch)
+	api.Post("/search", authMW, requireDemoAllowance("search"), searchHandler.HandleSearch)
 
 	log.Println("Routes configured (RBAC v2 — permission-based)")
 }

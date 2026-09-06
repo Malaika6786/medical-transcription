@@ -70,9 +70,15 @@ func (h *AuthHandler) HandleLogin(c *fiber.Ctx) error {
 	})
 }
 
-// HandleSignup handles public self-service account creation. New accounts
-// always get the "user" role — anything more privileged requires an admin
-// via HandleCreateUser.
+// signupRoles are the only roles a self-signup may request. "superuser" is
+// deliberately excluded — that account is provisioned once at seed time
+// (admin@xstek.net) and never through this endpoint.
+var signupRoles = map[string]bool{"user": true, "doctor": true, "admin": true}
+
+// HandleSignup handles public self-service account creation. The account is
+// created with status "pending" and no roles granted yet — RequestedRole
+// records what they asked for, and a superuser must call
+// POST /api/users/:id/approve before it does anything (see auth.User.IsApproved).
 // POST /api/auth/signup
 func (h *AuthHandler) HandleSignup(c *fiber.Ctx) error {
 	var req auth.SignupRequest
@@ -86,6 +92,7 @@ func (h *AuthHandler) HandleSignup(c *fiber.Ctx) error {
 	req.Username = strings.TrimSpace(req.Username)
 	req.Email = strings.TrimSpace(req.Email)
 	req.Name = strings.TrimSpace(req.Name)
+	req.Role = strings.TrimSpace(req.Role)
 
 	if req.Username == "" || req.Email == "" || req.Password == "" || req.Name == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -105,8 +112,20 @@ func (h *AuthHandler) HandleSignup(c *fiber.Ctx) error {
 			"error":   "Password must be at least 6 characters",
 		})
 	}
+	// Backward-compat: a client that doesn't send a role yet (old web
+	// frontend, before it's updated) defaults to the least-privileged role
+	// rather than failing outright.
+	if req.Role == "" {
+		req.Role = "user"
+	}
+	if !signupRoles[req.Role] {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"error":   "Role must be one of: user, doctor, admin",
+		})
+	}
 
-	user, err := h.userStore.CreateUser(req.Username, req.Email, req.Password, req.Name, []string{"user"}, "self-signup")
+	user, err := h.userStore.CreateSignupUser(req.Username, req.Email, req.Password, req.Name, req.Role, "self-signup")
 	if err != nil {
 		switch err {
 		case auth.ErrUserExists:
@@ -138,7 +157,7 @@ func (h *AuthHandler) HandleSignup(c *fiber.Ctx) error {
 		})
 	}
 
-	log.Printf("New signup: %s (username=%s, id=%s)", user.Email, user.Username, user.ID)
+	log.Printf("New signup pending approval: %s (username=%s, id=%s, requestedRole=%s)", user.Email, user.Username, user.ID, user.RequestedRole)
 
 	return c.Status(fiber.StatusCreated).JSON(auth.LoginResponse{
 		Success: true,
@@ -571,6 +590,49 @@ func (h *AuthHandler) AuthMiddleware() fiber.Handler {
 				"success": false,
 				"error":   "Invalid token",
 			})
+		}
+
+		c.Locals("claims", claims)
+		return c.Next()
+	}
+}
+
+// AuthMiddlewareAllowQueryToken is AuthMiddleware's counterpart for
+// WebSocket routes that need real authentication but can't rely on an
+// Authorization header — browsers don't send custom headers during a WS
+// handshake. It accepts the token either as a normal `Bearer <token>`
+// header (mobile clients that support it) or as a `?token=` query
+// parameter (the fallback every client, including the browser, can use) —
+// the same "token in the URL" approach this backend already uses for its
+// own outbound Corti WebSocket connections (see corti/ambient_proxy.go).
+//
+// Use this instead of AuthMiddleware only where a header genuinely can't be
+// sent; prefer the header-based AuthMiddleware everywhere else, since a URL
+// (query string) is more likely to be logged somewhere than a header.
+func (h *AuthHandler) AuthMiddlewareAllowQueryToken() fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		tokenStr := ""
+		if authHeader := c.Get("Authorization"); authHeader != "" {
+			if parts := strings.Split(authHeader, " "); len(parts) == 2 && parts[0] == "Bearer" {
+				tokenStr = parts[1]
+			}
+		}
+		if tokenStr == "" {
+			tokenStr = c.Query("token")
+		}
+		if tokenStr == "" {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+				"success": false,
+				"error":   "Authorization required (Bearer header or ?token= query parameter)",
+			})
+		}
+
+		claims, err := h.jwtManager.ValidateToken(tokenStr)
+		if err != nil {
+			if err == auth.ErrExpiredToken {
+				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"success": false, "error": "Token expired"})
+			}
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"success": false, "error": "Invalid token"})
 		}
 
 		c.Locals("claims", claims)

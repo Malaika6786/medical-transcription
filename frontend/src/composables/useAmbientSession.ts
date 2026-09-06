@@ -1,5 +1,5 @@
 import { ref, onUnmounted } from 'vue'
-import { getAuthHeaders, handleFetchResponse } from '@/stores/auth'
+import { getAuthHeaders, checkDemoLimit } from '@/stores/auth'
 
 interface TranscriptSegment {
   id?: string
@@ -76,8 +76,8 @@ export function useAmbientSession() {
         body: JSON.stringify({ language }),
       })
 
-      // Handle session expiry (401)
-      handleFetchResponse(response)
+      // Handle session expiry (401) and demo-trial-limit (403)
+      await checkDemoLimit(response)
 
       const data: StartSessionResponse = await response.json()
 

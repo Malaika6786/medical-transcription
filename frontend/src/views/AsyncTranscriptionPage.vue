@@ -19,6 +19,12 @@
           </v-card-title>
           
           <v-card-text>
+            <DemoUsageBanner
+              feature="file_transcription"
+              label="File Transcription"
+              description="Upload an audio file and get a transcript."
+            />
+
             <div data-tour="file-upload">
               <UploadAudio
                 @file-selected="handleFileSelected"
@@ -173,6 +179,12 @@
                     </div>
                   </div>
 
+                  <DemoUsageBanner
+                    feature="document_generation"
+                    label="Document Generation"
+                    description="Turn a transcript into a structured clinical document."
+                  />
+
                   <ReportGenerator
                     :templates="documentTemplates"
                     v-model:selected-template="selectedTemplate"
@@ -244,6 +256,8 @@
                   :is-saving="isSaving"
                   :show-save-button="true"
                   :hide-title="true"
+                  :document-title="sessionTitle || 'File Transcription'"
+                  :template-name="selectedTemplateDisplayName"
                   @save="saveCurrentSession"
                 />
               </v-expansion-panel-text>
@@ -354,8 +368,9 @@ import UploadAudio from '@/components/UploadAudio.vue'
 import TranscriptDisplay from '@/components/TranscriptDisplay.vue'
 import ReportGenerator from '@/components/ReportGenerator.vue'
 import GeneratedReportCard from '@/components/GeneratedReportCard.vue'
+import DemoUsageBanner from '@/components/DemoUsageBanner.vue'
 import { useTranscription } from '@/composables/useTranscription'
-import { isSuperUser, getAuthHeaders, handleFetchResponse } from '@/stores/auth'
+import { isSuperUser, getAuthHeaders, handleFetchResponse, checkDemoLimit } from '@/stores/auth'
 import { saveSession } from '@/stores/sessions'
 
 // Backend response format from Corti API
@@ -413,6 +428,9 @@ const expandedPanels = ref<string[]>(['transcript', 'report'])
 
 // Document generation state
 const selectedTemplate = ref('corti-soap')
+const selectedTemplateDisplayName = computed(() =>
+  documentTemplates.find(t => t.key === selectedTemplate.value)?.name || 'Clinical Document'
+)
 const selectedVerbosity = ref('concise')
 const isGeneratingDocument = ref(false)
 const generatedDocument = ref<GeneratedDocument | null>(null)
@@ -704,8 +722,8 @@ const generateDocument = async () => {
       body: JSON.stringify(requestBody)
     })
 
-    // Handle session expiry (401)
-    handleFetchResponse(generateResponse)
+    // Handle session expiry (401) and demo-trial-limit (403)
+    await checkDemoLimit(generateResponse)
 
     if (!generateResponse.ok) {
       throw new Error('Failed to generate document')
