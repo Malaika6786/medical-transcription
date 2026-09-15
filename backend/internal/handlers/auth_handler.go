@@ -271,7 +271,7 @@ func (h *AuthHandler) HandleUpdateUser(c *fiber.Ctx) error {
 
 	var req struct {
 		Name     string `json:"name"`
-		IsActive bool   `json:"isActive"`
+		IsActive *bool  `json:"isActive"`
 	}
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -327,8 +327,8 @@ func (h *AuthHandler) HandleDeleteUser(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"success":  true,
-		"message":  "User deleted successfully",
+		"success": true,
+		"message": "User deleted successfully",
 	})
 }
 
@@ -500,7 +500,8 @@ func (h *AuthHandler) HandleGrantPermission(c *fiber.Ctx) error {
 		if err == auth.ErrUserNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"success": false, "error": "User not found"})
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"success": false, "error": err.Error()})
+		log.Printf("auth_handler: grant permission: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"success": false, "error": "Failed to grant permission"})
 	}
 
 	return c.JSON(fiber.Map{
@@ -529,7 +530,8 @@ func (h *AuthHandler) HandleDenyPermission(c *fiber.Ctx) error {
 		if err == auth.ErrUserNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"success": false, "error": "User not found"})
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"success": false, "error": err.Error()})
+		log.Printf("auth_handler: deny permission: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"success": false, "error": "Failed to deny permission"})
 	}
 
 	return c.JSON(fiber.Map{
@@ -550,7 +552,11 @@ func (h *AuthHandler) HandleRemovePermissionOverride(c *fiber.Ctx) error {
 		if err == auth.ErrUserNotFound {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"success": false, "error": "User not found"})
 		}
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": err.Error()})
+		if err == auth.ErrInvalidOverrideKind {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"success": false, "error": err.Error()})
+		}
+		log.Printf("auth_handler: remove permission override: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"success": false, "error": "Failed to remove permission override"})
 	}
 
 	return c.JSON(fiber.Map{

@@ -569,10 +569,28 @@ pre {
   background: var(--glass-bg);
   border: 1px solid var(--border-subtle);
   overflow-x: auto;
-  
+
   code {
     background: transparent;
     padding: 0;
     color: inherit;
+  }
+}
+
+// Respect the OS-level "reduce motion" preference: stop every continuous/
+// decorative animation (background blob drift, logo pulse, hue-shifts,
+// etc.) and cap one-shot transitions to a near-instant duration, instead of
+// leaving them running for users who've explicitly asked their system to
+// minimize motion. Deliberately broad (targets every element) rather than
+// an allowlist of specific classes, since new decorative animations get
+// added to individual pages over time and would otherwise be missed here.
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }

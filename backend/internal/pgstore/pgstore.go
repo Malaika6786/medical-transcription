@@ -6,7 +6,9 @@ package pgstore
 
 import (
 	"context"
+	"crypto/rand"
 	_ "embed"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log"
@@ -17,6 +19,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"corti-backend/internal/auth"
+	"corti-backend/internal/cryptofield"
 )
 
 //go:embed schema.sql
@@ -30,6 +33,35 @@ var ErrTemplateNotFound = errors.New("template not found")
 // persistence.
 type Store struct {
 	pool *pgxpool.Pool
+	// cipher encrypts/decrypts patient PII columns (nhs_number_enc,
+	// name_enc, date_of_birth_enc — see patient_store.go). Nil until
+	// SetFieldCipher is called; every patient_store.go method panics via
+	// requireCipher if used before that, rather than silently writing
+	// plaintext.
+	cipher *cryptofield.Cipher
+}
+
+// SetFieldCipher wires in the encryption used for patient PII columns.
+// Called once from main.go at startup, after loading FIELD_ENCRYPTION_KEY —
+// kept as a separate setter (rather than a Connect parameter) so every
+// existing pgstore.Connect call site is unaffected.
+func (s *Store) SetFieldCipher(c *cryptofield.Cipher) {
+	s.cipher = c
+}
+
+// newRandomID returns a 16-byte random hex string, used for ID prefixes
+// that aren't drawn from the users table's sequential ID scheme (e.g.
+// "pt_" + newRandomID() for patients — see patient_store.go).
+func newRandomID() string {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		// crypto/rand failing is effectively unrecoverable (no entropy
+		// source) — panicking here matches how the rest of the codebase
+		// treats "this should never happen" conditions rather than
+		// threading an error return through every ID-generating call site.
+		panic(fmt.Sprintf("pgstore: crypto/rand failed: %v", err))
+	}
+	return hex.EncodeToString(b)
 }
 
 var (
@@ -100,6 +132,34 @@ func (s *Store) EnsureSeed(ctx context.Context) error {
 			return fmt.Errorf("seed superuser: %w", err)
 		}
 		log.Println("pgstore: seeded default superuser")
+	}
+
+	if err := s.grantNewPermissionsToSystemRoles(ctx); err != nil {
+		return fmt.Errorf("migrate system role permissions: %w", err)
+	}
+	return nil
+}
+
+// grantNewPermissionsToSystemRoles is an idempotent, additive migration:
+// every time a new built-in permission is introduced (e.g. the NHS
+// integration permissions added alongside internal/nhs), an
+// already-seeded database's system roles (roleCount was > 0, so
+// auth.DefaultRoles() in EnsureSeed above never ran again) would otherwise
+// never receive it. This appends any permission auth.DefaultRoles() says a
+// system role should have but the stored row doesn't yet — it only adds,
+// never removes, so a superuser's own permission edits on a system role
+// (if any) are preserved.
+func (s *Store) grantNewPermissionsToSystemRoles(ctx context.Context) error {
+	for _, r := range auth.DefaultRoles() {
+		_, err := s.pool.Exec(ctx, `
+			UPDATE roles SET permissions = (
+				SELECT array_agg(DISTINCT p) FROM unnest(permissions || $2::text[]) AS p
+			)
+			WHERE id = $1 AND is_system = TRUE`,
+			r.ID, permsToStrings(r.Permissions))
+		if err != nil {
+			return fmt.Errorf("role %s: %w", r.ID, err)
+		}
 	}
 	return nil
 }

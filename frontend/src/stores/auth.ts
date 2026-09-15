@@ -84,6 +84,9 @@ export const canViewDocumentation       = computed(() => hasPermission('document
 export const canAccessEmbeddedAssistant = computed(() => hasPermission('embedded_assistant.access'))
 export const canManageTemplates         = computed(() => hasPermission('templates.manage'))
 export const canViewCortiSections       = computed(() => hasPermission('corti_sections.view'))
+export const canManagePatients          = computed(() => hasPermission('patients.manage'))
+export const canUseNHSIntegration       = computed(() => hasPermission('nhs.integration'))
+export const canViewAuditLog            = computed(() => hasPermission('audit.view'))
 
 // Configure axios defaults if a token is already stored.
 if (token.value) {

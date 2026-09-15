@@ -210,6 +210,17 @@
                   :template-name="availableTemplates.find(t => t.key === selectedSession?.document?.templateKey)?.name"
                 />
                 <v-btn
+                  v-if="canUseNHSIntegration"
+                  icon
+                  variant="text"
+                  size="small"
+                  color="secondary"
+                  @click="showSendToGpDialog = true"
+                >
+                  <v-icon icon="mdi-hospital-box-outline" />
+                  <v-tooltip activator="parent" location="left">Send to GP via SystmOne</v-tooltip>
+                </v-btn>
+                <v-btn
                   icon
                   variant="text"
                   size="small"
@@ -399,6 +410,14 @@
       </v-card>
     </v-dialog>
 
+    <!-- Send to GP (NHS/SystmOne) Dialog -->
+    <SendToGpDialog
+      v-if="selectedSession"
+      v-model="showSendToGpDialog"
+      :session-id="selectedSession.id"
+      @sent="showSendToGpDialog = false"
+    />
+
     <!-- Snackbars -->
     <v-snackbar v-model="showSuccess" color="success" timeout="3000">
       {{ successMessage }}
@@ -416,9 +435,10 @@ import { onBeforeRouteLeave, useRoute } from 'vue-router'
 import RichTextEditor from '@/components/RichTextEditor.vue'
 import DocumentExportButtons from '@/components/DocumentExportButtons.vue'
 import AiAssistantPanel from '@/components/AiAssistantPanel.vue'
-import { 
-  userSessions, 
-  deleteSession, 
+import SendToGpDialog from '@/components/SendToGpDialog.vue'
+import {
+  userSessions,
+  deleteSession,
   updateSessionDocument,
   sessionCount,
   loadSessions,
@@ -430,9 +450,12 @@ import {
   canAccessAmbient,
   canAccessFileTranscription,
   canAccessDictation,
-  canAccessEmbeddedAssistant
+  canAccessEmbeddedAssistant,
+  canUseNHSIntegration
 } from '@/stores/auth'
 import api from '@/services/api'
+
+const showSendToGpDialog = ref(false)
 
 // Template types
 interface DocumentTemplate {

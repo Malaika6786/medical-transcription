@@ -2,7 +2,7 @@
   <div class="role-management-page">
     <v-row>
       <v-col cols="12">
-        <div class="d-flex align-center justify-space-between mb-6">
+        <div class="d-flex flex-column flex-sm-row align-sm-center justify-sm-space-between ga-3 mb-6">
           <div>
             <h1 class="text-h4 font-weight-bold mb-2">
               <v-icon icon="mdi-shield-key" class="mr-2" color="primary" />

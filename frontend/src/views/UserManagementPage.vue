@@ -2,7 +2,7 @@
   <div class="user-management-page">
     <v-row>
       <v-col cols="12">
-        <div class="d-flex align-center justify-space-between mb-6">
+        <div class="d-flex flex-column flex-sm-row align-sm-center justify-sm-space-between ga-3 mb-6">
           <div>
             <h1 class="text-h4 font-weight-bold mb-2">
               <v-icon icon="mdi-account-group" class="mr-2" color="primary" />
@@ -10,7 +10,7 @@
             </h1>
             <p class="text-body-1 text-medium-emphasis">Manage users and their permissions</p>
           </div>
-          <div class="d-flex ga-2">
+          <div class="d-flex flex-wrap ga-2">
             <v-btn color="warning" variant="tonal" @click="showForceLogoutDialog = true">
               <v-icon icon="mdi-logout-variant" class="mr-2" />
               Force Logout All
@@ -33,13 +33,26 @@
               <v-progress-circular indeterminate color="primary" size="48" />
               <p class="text-body-2 text-medium-emphasis mt-4">Loading users...</p>
             </div>
-            <v-data-table
-              v-else
-              :headers="headers"
-              :items="users"
-              :items-per-page="10"
-              class="users-table"
-            >
+            <template v-else>
+              <v-text-field
+                v-model="search"
+                label="Search by name, email, or username"
+                prepend-inner-icon="mdi-magnify"
+                variant="outlined"
+                density="compact"
+                clearable
+                single-line
+                hide-details
+                class="mb-4"
+                style="max-width: 420px"
+              />
+              <v-data-table
+                :headers="headers"
+                :items="users"
+                :search="search"
+                :items-per-page="10"
+                class="users-table"
+              >
               <template v-slot:item.roles="{ item }">
                 <div class="d-flex flex-wrap ga-1">
                   <v-chip
@@ -98,7 +111,8 @@
                   </v-btn>
                 </div>
               </template>
-            </v-data-table>
+              </v-data-table>
+            </template>
           </v-card-text>
         </v-card>
       </v-col>
@@ -422,14 +436,6 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-
-    <v-snackbar v-model="showSuccess" color="success" timeout="3000">{{ successMessage }}</v-snackbar>
-    <v-snackbar v-model="showError" color="error" timeout="5000">
-      {{ errorMessage }}
-      <template v-slot:actions>
-        <v-btn variant="text" @click="showError = false">Close</v-btn>
-      </template>
-    </v-snackbar>
   </div>
 </template>
 
@@ -438,8 +444,10 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import api from '@/services/api'
 import { currentUser, logout } from '@/stores/auth'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
+const toast = useToast()
 
 interface UserRecord {
   id: string
@@ -472,6 +480,7 @@ interface PermissionBreakdown {
 }
 
 const users            = ref<UserRecord[]>([])
+const search           = ref('')
 const availableRoles   = ref<Role[]>([])
 const availablePermissions = ref<string[]>([])
 
@@ -489,10 +498,6 @@ const showForceLogoutDialog  = ref(false)
 const showPermDialog         = ref(false)
 const showResetPasswordDialog = ref(false)
 
-const showSuccess    = ref(false)
-const showError      = ref(false)
-const successMessage = ref('')
-const errorMessage   = ref('')
 
 const createFormRef = ref()
 const editFormRef   = ref()
@@ -575,8 +580,7 @@ const openSessionsDialog = async (item: UserRecord) => {
     const response = await api.get(`/admin/sessions/${item.id}`)
     sessionsList.value = response.data.sessions || []
   } catch (err: any) {
-    errorMessage.value = err.response?.data?.error || 'Failed to load sessions'
-    showError.value = true
+    toast.error(err.response?.data?.error || 'Failed to load sessions')
     showSessionsDialog.value = false
   } finally {
     sessionsLoading.value = false
@@ -591,8 +595,7 @@ const fetchUsers = async () => {
       users.value = response.data.users
     }
   } catch (err: any) {
-    errorMessage.value = err.response?.data?.error || 'Failed to load users'
-    showError.value = true
+    toast.error(err.response?.data?.error || 'Failed to load users')
   } finally {
     isLoading.value = false
   }
@@ -628,12 +631,10 @@ const createUser = async () => {
     if (response.data.success) {
       users.value.push(response.data.user)
       showCreateDialog.value = false
-      successMessage.value = 'User created successfully!'
-      showSuccess.value = true
+      toast.success('User created successfully!')
     }
   } catch (err: any) {
-    errorMessage.value = err.response?.data?.error || 'Failed to create user'
-    showError.value = true
+    toast.error(err.response?.data?.error || 'Failed to create user')
   } finally {
     isSaving.value = false
   }
@@ -661,11 +662,9 @@ const updateUser = async () => {
       if (index !== -1) users.value[index] = rolesResponse.data.user
     }
     showEditDialog.value = false
-    successMessage.value = 'User updated successfully!'
-    showSuccess.value = true
+    toast.success('User updated successfully!')
   } catch (err: any) {
-    errorMessage.value = err.response?.data?.error || 'Failed to update user'
-    showError.value = true
+    toast.error(err.response?.data?.error || 'Failed to update user')
   } finally {
     isSaving.value = false
   }
@@ -684,12 +683,10 @@ const deleteUser = async () => {
     if (response.data.success) {
       users.value = users.value.filter(u => u.id !== deletingUser.value?.id)
       showDeleteDialog.value = false
-      successMessage.value = 'User deleted successfully!'
-      showSuccess.value = true
+      toast.success('User deleted successfully!')
     }
   } catch (err: any) {
-    errorMessage.value = err.response?.data?.error || 'Failed to delete user'
-    showError.value = true
+    toast.error(err.response?.data?.error || 'Failed to delete user')
   } finally {
     isDeleting.value = false
   }
@@ -720,11 +717,9 @@ const grantPermission = async () => {
     grantPerm.value = null
     await fetchPermissionBreakdown(permUser.value.id)
     await fetchUsers()
-    successMessage.value = 'Permission granted!'
-    showSuccess.value = true
+    toast.success('Permission granted!')
   } catch (err: any) {
-    errorMessage.value = err.response?.data?.error || 'Failed to grant permission'
-    showError.value = true
+    toast.error(err.response?.data?.error || 'Failed to grant permission')
   } finally {
     isPermSaving.value = false
   }
@@ -738,11 +733,9 @@ const denyPermission = async () => {
     denyPerm.value = null
     await fetchPermissionBreakdown(permUser.value.id)
     await fetchUsers()
-    successMessage.value = 'Permission denied!'
-    showSuccess.value = true
+    toast.success('Permission denied!')
   } catch (err: any) {
-    errorMessage.value = err.response?.data?.error || 'Failed to deny permission'
-    showError.value = true
+    toast.error(err.response?.data?.error || 'Failed to deny permission')
   } finally {
     isPermSaving.value = false
   }
@@ -755,11 +748,9 @@ const removeOverride = async (perm: string, kind: 'grant' | 'deny') => {
     await api.delete(`/users/${permUser.value.id}/permissions/${encodeURIComponent(perm)}?type=${kind}`)
     await fetchPermissionBreakdown(permUser.value.id)
     await fetchUsers()
-    successMessage.value = 'Override removed!'
-    showSuccess.value = true
+    toast.success('Override removed!')
   } catch (err: any) {
-    errorMessage.value = err.response?.data?.error || 'Failed to remove override'
-    showError.value = true
+    toast.error(err.response?.data?.error || 'Failed to remove override')
   } finally {
     isPermSaving.value = false
   }
@@ -781,12 +772,10 @@ const resetPassword = async () => {
     })
     if (response.data.success) {
       showResetPasswordDialog.value = false
-      successMessage.value = `Password reset for ${resetPasswordUser.value.name}`
-      showSuccess.value = true
+      toast.success(`Password reset for ${resetPasswordUser.value.name}`)
     }
   } catch (err: any) {
-    errorMessage.value = err.response?.data?.error || 'Failed to reset password'
-    showError.value = true
+    toast.error(err.response?.data?.error || 'Failed to reset password')
   } finally {
     isResettingPassword.value = false
   }
@@ -802,8 +791,7 @@ const forceLogoutAll = async () => {
       logout()
     }
   } catch (err: any) {
-    errorMessage.value = err.response?.data?.error || 'Failed to force logout all users'
-    showError.value = true
+    toast.error(err.response?.data?.error || 'Failed to force logout all users')
   } finally {
     isForceLoggingOut.value = false
   }

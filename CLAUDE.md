@@ -39,12 +39,27 @@ internal/
 ├── ai/            # AI Assistance module: provider-agnostic LLM client (OpenAI-compatible), prompts, summary parsing, embeddings client + chunker (embed.go)
 ├── auth/          # JWT auth, RBAC models, storage contracts (storage.go) — implemented by internal/pgstore
 ├── corti/         # Corti API clients: token_manager, async_client, ambient_proxy, dictation_proxy
+├── cryptofield/   # AES-256-GCM field encryption for patient PII (nhs_number/name/date_of_birth)
 ├── embedding/     # Async embedding worker: backfills/refreshes vectors, notified on session save
-├── handlers/      # One handler file per feature (auth, async, ambient, dictation, sessions, ai, search)
+├── handlers/      # One handler file per feature (auth, async, ambient, dictation, sessions, ai, search, patient, nhs, audit)
 ├── middleware/    # CORS, request logger (with requestID), panic recovery
+├── nhs/           # NHS/SystmOne integration: NHS number validation, patient model, PDS client, FHIR message builder, MESH client, CIS2 (OIDC) scaffold — see docs/nhs/README.md for what's live vs. blocked on NHS-issued credentials
+├── pdfgen/        # Dependency-free PDF generation for the GP Connect: Send Document clinical letter
 ├── pgstore/       # PostgreSQL + pgvector stores (pgx, hand-written SQL) + embedded schema.sql
-└── utils/         # Audio validation, env loading
+└── utils/         # Audio validation, env loading, data-residency boot guard (ValidateDataResidency)
 ```
+
+## NHS/SystmOne Integration
+
+See [`SYSTMONE_INTEGRATION_REPORT.md`](../SYSTMONE_INTEGRATION_REPORT.md)
+(feasibility analysis) and [`docs/nhs/README.md`](docs/nhs/README.md)
+(what's actually implemented vs. what still needs NHS-issued credentials).
+`/api/patients` and `/api/nhs/*` routes only register when
+`FIELD_ENCRYPTION_KEY` is configured (see `main.go`) — patient PII is never
+handled unencrypted. `utils.Config.ValidateDataResidency` refuses to boot
+if `CORTI_ENVIRONMENT`/`AI_BASE_URL` fall outside a UK/EU/local allowlist,
+unless `DATA_RESIDENCY_UK_ONLY=false` (the shipped demo default, since this
+project's default data is synthetic).
 
 **Storage**: PostgreSQL + pgvector is the system of record (users, roles, sessions, Corti templates, embeddings) — see `docs/adr/0001..0003` and `CONTEXT.md` for the domain glossary. `DATABASE_URL` configures it (local default `postgres://localhost:5432/meditrans`; `docker-compose.yml` at the repo root for Docker setups). The JSON files in `cmd/server/data/` are legacy — imported once via `go run ./cmd/migrate-json` as the one-time import source; the old JSON-file store implementations themselves have been removed (dead code cleanup), so `cmd/migrate-json` reads the files directly rather than through a `UserStore`/`RoleStore`/`SessionStore`. Embeddings are 384-dim `bge-small-en-v1.5` served by Ollama (`EMBED_*` env vars), computed asynchronously: session saves notify `internal/embedding.Worker`, NULL vectors are backfilled at startup, and `POST /api/search` runs cosine search over transcript chunks ∪ extraction embeddings scoped to the caller's own sessions.
 

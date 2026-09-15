@@ -68,6 +68,7 @@
             color="primary"
             :loading="authLoading"
             :disabled="!isFormValid"
+            :ripple="false"
           >
             <v-icon icon="mdi-login" class="mr-2" />
             Sign In

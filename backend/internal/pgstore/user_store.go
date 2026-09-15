@@ -323,10 +323,17 @@ func (s *Store) ListUsers() []*auth.User {
 	return users
 }
 
-// UpdateUser updates a user's name and active status.
-func (s *Store) UpdateUser(id, name string, isActive bool) (*auth.User, error) {
-	if err := s.mustAffectUser(`UPDATE users SET name = $2, is_active = $3 WHERE id = $1`, id, name, isActive); err != nil {
-		return nil, err
+// UpdateUser updates a user's name, and their active status only when
+// isActive is non-nil — a name-only update must never flip is_active.
+func (s *Store) UpdateUser(id, name string, isActive *bool) (*auth.User, error) {
+	if isActive == nil {
+		if err := s.mustAffectUser(`UPDATE users SET name = $2 WHERE id = $1`, id, name); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := s.mustAffectUser(`UPDATE users SET name = $2, is_active = $3 WHERE id = $1`, id, name, *isActive); err != nil {
+			return nil, err
+		}
 	}
 	return s.GetUserByID(id)
 }
@@ -374,7 +381,7 @@ func (s *Store) RemovePermissionOverride(id string, p auth.Permission, kind stri
 	case "deny":
 		column = "denied_permissions"
 	default:
-		return nil, fmt.Errorf("kind must be 'grant' or 'deny'")
+		return nil, auth.ErrInvalidOverrideKind
 	}
 	query := fmt.Sprintf(`UPDATE users SET %s = array_remove(%s, $2) WHERE id = $1`, column, column)
 	if err := s.mustAffectUser(query, id, string(p)); err != nil {

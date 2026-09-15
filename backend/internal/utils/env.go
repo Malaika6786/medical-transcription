@@ -3,9 +3,12 @@ package utils
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"math"
+	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -58,6 +61,36 @@ type Config struct {
 	EmbedModel          string
 	EmbedAPIKey         string
 	EmbedTimeoutSeconds int
+
+	// Field-level encryption (internal/cryptofield) for patient PII columns
+	// — see SYSTMONE_INTEGRATION_REPORT.md, "No encryption at application/
+	// database field level". Hex-encoded 32-byte key; generate with
+	// `openssl rand -hex 32`. Empty in local/demo use is tolerated (patient
+	// routes are simply unavailable, see main.go) but must never be empty
+	// wherever real patient data is handled.
+	FieldEncryptionKey string
+
+	// RequireUKDataResidency, when true (the default), makes main.go refuse
+	// to start if CortiEnvironment or AIBaseURL point outside an allowed
+	// UK/EU/local set — see ValidateDataResidency. Set
+	// DATA_RESIDENCY_UK_ONLY=false only for throwaway local/demo use with
+	// synthetic data, never with real patient data.
+	RequireUKDataResidency bool
+
+	// NHS/SystmOne integration (internal/nhs) — see docs/nhs/README.md for
+	// what each of these unlocks and what still needs NHS-issued
+	// credentials before it can reach a real environment.
+	PDSBaseURL          string
+	PDSAPIKey           string
+	MeshBaseURL         string
+	MeshMailboxID       string
+	MeshMailboxPassword string
+	MeshSharedKey       string
+	NHSOrgODSCode       string // this organisation's ODS code, used as the FHIR message author
+	CIS2IssuerURL       string
+	CIS2ClientID        string
+	CIS2ClientSecret    string
+	CIS2RedirectURL     string
 }
 
 // LoadConfig loads configuration from environment variables
@@ -144,6 +177,21 @@ func LoadConfig() *Config {
 		EmbedModel:          getEnv("EMBED_MODEL", "hf.co/CompendiumLabs/bge-small-en-v1.5-gguf"),
 		EmbedAPIKey:         getEnv("EMBED_API_KEY", ""),
 		EmbedTimeoutSeconds: getEnvAsInt("EMBED_TIMEOUT_SECONDS", 60),
+
+		FieldEncryptionKey:     getEnv("FIELD_ENCRYPTION_KEY", ""),
+		RequireUKDataResidency: getEnvAsBool("DATA_RESIDENCY_UK_ONLY", true),
+
+		PDSBaseURL:          getEnv("PDS_BASE_URL", "https://sandbox.api.service.nhs.uk/personal-demographics/FHIR/R4"),
+		PDSAPIKey:           getEnv("PDS_API_KEY", ""),
+		MeshBaseURL:         getEnv("MESH_BASE_URL", "https://msg.intspineservices.nhs.uk"),
+		MeshMailboxID:       getEnv("MESH_MAILBOX_ID", ""),
+		MeshMailboxPassword: getEnv("MESH_MAILBOX_PASSWORD", ""),
+		MeshSharedKey:       getEnv("MESH_SHARED_KEY", ""),
+		NHSOrgODSCode:       getEnv("NHS_ORG_ODS_CODE", ""),
+		CIS2IssuerURL:       getEnv("CIS2_ISSUER_URL", ""),
+		CIS2ClientID:        getEnv("CIS2_CLIENT_ID", ""),
+		CIS2ClientSecret:    getEnv("CIS2_CLIENT_SECRET", ""),
+		CIS2RedirectURL:     getEnv("CIS2_REDIRECT_URL", ""),
 	}
 	if config.AIMaxCompletionTokens <= 0 {
 		log.Printf(
@@ -210,4 +258,94 @@ func getEnvAsFloat64(key string, defaultValue float64) float64 {
 		}
 	}
 	return defaultValue
+}
+
+// getEnvAsBool retrieves an environment variable as a bool with a default
+// fallback. Accepts the same forms as strconv.ParseBool ("true"/"false"/
+// "1"/"0"/"t"/"f", case-insensitive).
+func getEnvAsBool(key string, defaultValue bool) bool {
+	if value, exists := os.LookupEnv(key); exists {
+		if b, err := strconv.ParseBool(value); err == nil {
+			return b
+		}
+	}
+	return defaultValue
+}
+
+// ukApprovedCortiEnvironments/ukApprovedAIHosts are the allowlists
+// ValidateDataResidency checks against. Corti's EU region value needs
+// confirming against Corti's own docs once an account exists there (see
+// SYSTMONE_INTEGRATION_REPORT.md §7) — "eu" is this project's best-effort
+// guess at the value Corti expects, flagged for verification, not asserted
+// as certain.
+var ukApprovedCortiEnvironments = map[string]bool{
+	"eu": true,
+	"uk": true,
+}
+
+// ukApprovedAIHosts lists hosts considered acceptable for the AI
+// summarization endpoint when data residency is enforced: a local/private
+// deployment (localhost, the project's own GPU VM pattern) is always fine
+// since the operator controls exactly where that runs.
+var ukApprovedAIHosts = []string{
+	"localhost",
+	"127.0.0.1",
+}
+
+// ValidateDataResidency enforces config.RequireUKDataResidency (default
+// true): if set, it is fatal for CortiEnvironment or AIBaseURL to point
+// somewhere outside the UK/EU/local allowlist. This exists because the
+// project's own shipped defaults previously sent transcript/extraction
+// content to Corti's US region and a non-UK LLM endpoint by default — see
+// SYSTMONE_INTEGRATION_REPORT.md, "Default AI data flows are not UK-
+// hosted". Returns a non-nil error describing exactly what's out of policy
+// instead of logging and continuing, because silently continuing is
+// exactly the failure mode this check exists to prevent.
+func (c *Config) ValidateDataResidency() error {
+	if !c.RequireUKDataResidency {
+		return nil
+	}
+	var problems []string
+	if !ukApprovedCortiEnvironments[strings.ToLower(c.CortiEnvironment)] {
+		problems = append(problems, fmt.Sprintf(
+			"CORTI_ENVIRONMENT=%q is not in the UK/EU allowlist (%v) — patient audio/transcript data would leave the UK/EU by default",
+			c.CortiEnvironment, sortedKeys(ukApprovedCortiEnvironments)))
+	}
+	if host := hostOf(c.AIBaseURL); host != "" && !isApprovedAIHost(host) {
+		problems = append(problems, fmt.Sprintf(
+			"AI_BASE_URL host %q is not in the approved list (%v, or your own private/self-hosted endpoint added to ukApprovedAIHosts) — clinical extraction content would be sent there",
+			host, ukApprovedAIHosts))
+	}
+	if len(problems) == 0 {
+		return nil
+	}
+	return fmt.Errorf(
+		"data residency check failed (set DATA_RESIDENCY_UK_ONLY=false only for local/demo use with synthetic data, never with real patient data):\n  - %s",
+		strings.Join(problems, "\n  - "))
+}
+
+func hostOf(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return ""
+	}
+	return u.Hostname()
+}
+
+func isApprovedAIHost(host string) bool {
+	for _, h := range ukApprovedAIHosts {
+		if strings.EqualFold(h, host) {
+			return true
+		}
+	}
+	return false
+}
+
+func sortedKeys(m map[string]bool) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }

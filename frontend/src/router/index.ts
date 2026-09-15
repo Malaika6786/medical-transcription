@@ -134,6 +134,18 @@ const router = createRouter({
       name: 'embedded-assistant',
       component: () => import('@/views/EmbeddedAssistantPage.vue'),
       meta: { requiresAuth: true, permission: 'embedded_assistant.access' }
+    },
+    {
+      path: '/patients',
+      name: 'patients',
+      component: () => import('@/views/PatientsPage.vue'),
+      meta: { requiresAuth: true, permission: 'patients.manage' }
+    },
+    {
+      path: '/audit-log',
+      name: 'audit-log',
+      component: () => import('@/views/AuditLogPage.vue'),
+      meta: { requiresAuth: true, permission: 'audit.view' }
     }
   ]
 })

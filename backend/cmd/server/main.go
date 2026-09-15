@@ -15,9 +15,11 @@ import (
 	"corti-backend/internal/ai"
 	"corti-backend/internal/auth"
 	"corti-backend/internal/corti"
+	"corti-backend/internal/cryptofield"
 	"corti-backend/internal/embedding"
 	"corti-backend/internal/handlers"
 	"corti-backend/internal/middleware"
+	"corti-backend/internal/nhs"
 	"corti-backend/internal/pgstore"
 	"corti-backend/internal/utils"
 )
@@ -25,6 +27,15 @@ import (
 func main() {
 	// Load configuration
 	config := utils.LoadConfig()
+
+	// Refuse to boot with a data-flow configuration that sends patient
+	// audio/transcript/extraction content outside the UK/EU by default —
+	// see SYSTMONE_INTEGRATION_REPORT.md, "Default AI data flows are not
+	// UK-hosted". Set DATA_RESIDENCY_UK_ONLY=false only for local/demo use
+	// with synthetic data.
+	if err := config.ValidateDataResidency(); err != nil {
+		log.Fatalf("%v", err)
+	}
 
 	// Initialize Fiber app with custom error handler
 	app := fiber.New(fiber.Config{
@@ -61,6 +72,23 @@ func main() {
 	}
 	if err := store.EnsureSeed(ctx); err != nil {
 		log.Fatalf("Failed to seed database: %v", err)
+	}
+
+	// Field-level encryption for patient PII (nhs_number/name/date_of_birth
+	// — see internal/cryptofield and SYSTMONE_INTEGRATION_REPORT.md, "No
+	// encryption at application/database field level"). Patient/NHS routes
+	// are only registered when a key is configured — see setupRoutes.
+	var fieldCipher *cryptofield.Cipher
+	if config.FieldEncryptionKey != "" {
+		fieldCipher, err = cryptofield.NewFromHexKey(config.FieldEncryptionKey)
+		if err != nil {
+			log.Fatalf("Invalid FIELD_ENCRYPTION_KEY: %v", err)
+		}
+		store.SetFieldCipher(fieldCipher)
+		log.Println("Field encryption enabled for patient PII (FIELD_ENCRYPTION_KEY configured)")
+	} else {
+		log.Println("WARNING: FIELD_ENCRYPTION_KEY not set — patient/NHS integration routes are disabled. " +
+			"Generate one with `openssl rand -hex 32` before using patient records or GP Connect: Send Document.")
 	}
 
 	// All three storage contracts are served by the Postgres store.
@@ -135,8 +163,31 @@ func main() {
 		config.AIMaxCompletionTokens,
 	)
 
+	// NHS/SystmOne integration handlers (internal/nhs) — patients/audit
+	// only registered once field encryption is configured (see above);
+	// PDS/MESH clients are always built (they simply return a clear error
+	// if their credentials aren't configured — see nhs.PDSClient/MESHClient)
+	// so the routes exist and respond sensibly even before real NHS
+	// credentials are wired in.
+	var patientHandler *handlers.PatientHandler
+	var nhsHandler *handlers.NHSHandler
+	var auditHandler *handlers.AuditHandler
+	if fieldCipher != nil {
+		pdsClient := nhs.NewPDSClient(config.PDSBaseURL, config.PDSAPIKey)
+		meshClient := nhs.NewMESHClient(nhs.MESHConfig{
+			BaseURL:         config.MeshBaseURL,
+			MailboxID:       config.MeshMailboxID,
+			MailboxPassword: config.MeshMailboxPassword,
+			SharedKey:       config.MeshSharedKey,
+		})
+		patientHandler = handlers.NewPatientHandler(store)
+		nhsHandler = handlers.NewNHSHandler(sessionStore, store, pdsClient, meshClient, config.NHSOrgODSCode, "XStek AI Medical Transcription")
+		auditHandler = handlers.NewAuditHandler(store)
+		log.Printf("NHS integration module: PDS=%s MESH=%s (see docs/nhs/README.md for what's live vs. needs NHS-issued credentials)", config.PDSBaseURL, config.MeshBaseURL)
+	}
+
 	// Setup routes
-	setupRoutes(app, authHandler, rolesHandler, asyncHandler, ambientHandler, dictationHandler, sessionsHandler, embeddedHandler, aiHandler, searchHandler, adminHandler, store)
+	setupRoutes(app, authHandler, rolesHandler, asyncHandler, ambientHandler, dictationHandler, sessionsHandler, embeddedHandler, aiHandler, searchHandler, adminHandler, patientHandler, nhsHandler, auditHandler, store)
 
 	// Health check endpoint
 	app.Get("/health", func(c *fiber.Ctx) error {
@@ -181,6 +232,9 @@ func setupRoutes(
 	aiHandler *handlers.AIHandler,
 	searchHandler *handlers.SearchHandler,
 	adminHandler *handlers.AdminHandler,
+	patientHandler *handlers.PatientHandler, // nil if FIELD_ENCRYPTION_KEY is not configured
+	nhsHandler *handlers.NHSHandler, // nil if FIELD_ENCRYPTION_KEY is not configured
+	auditHandler *handlers.AuditHandler, // nil if FIELD_ENCRYPTION_KEY is not configured
 	store *pgstore.Store,
 ) {
 	api := app.Group("/api")
@@ -347,6 +401,31 @@ func setupRoutes(
 	// caller's own sessions inside the SQL)
 	// ============================================
 	api.Post("/search", authMW, requireDemoAllowance("search"), searchHandler.HandleSearch)
+
+	// ============================================
+	// NHS/SystmOne Integration  (requires patients.manage / nhs.integration
+	// / audit.view — see SYSTMONE_INTEGRATION_REPORT.md). Only registered
+	// once FIELD_ENCRYPTION_KEY is configured; otherwise these paths 404
+	// rather than silently handling patient data unencrypted.
+	// ============================================
+	if patientHandler != nil && nhsHandler != nil && auditHandler != nil {
+		patients := api.Group("/patients", authMW, requirePerm(auth.PermPatientsManage))
+		patients.Post("/", patientHandler.HandleCreatePatient)
+		patients.Get("/", patientHandler.HandleListPatients)
+		patients.Get("/:id", patientHandler.HandleGetPatient)
+		patients.Put("/:id", patientHandler.HandleUpdatePatient)
+		patients.Delete("/:id", patientHandler.HandleDeletePatient)
+		patients.Post("/:id/verify-pds", requirePerm(auth.PermNHSIntegration), nhsHandler.HandleVerifyPatientAgainstPDS)
+
+		sessions.Put("/:id/patient", requirePerm(auth.PermPatientsManage), patientHandler.HandleLinkSession)
+
+		nhsGroup := api.Group("/nhs", authMW, requirePerm(auth.PermNHSIntegration))
+		nhsGroup.Post("/pds/trace", nhsHandler.HandleTraceByNHSNumber)
+		nhsGroup.Post("/pds/search", nhsHandler.HandleSearchByDemographics)
+		nhsGroup.Post("/sessions/:id/send-to-gp", nhsHandler.HandleSendToGP)
+
+		api.Get("/audit", authMW, requirePerm(auth.PermAuditView), auditHandler.HandleListAuditEvents)
+	}
 
 	log.Println("Routes configured (RBAC v2 — permission-based)")
 }

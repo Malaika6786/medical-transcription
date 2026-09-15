@@ -19,7 +19,10 @@ type UserStorage interface {
 	// to approved. RejectUser flips it to rejected without granting access.
 	ApproveUser(id string) (*User, error)
 	RejectUser(id string) (*User, error)
-	UpdateUser(id, name string, isActive bool) (*User, error)
+	// isActive is a pointer so a caller updating just the name doesn't
+	// silently deactivate the account (Go's zero-value bool would write
+	// is_active = false if this were a plain bool) — nil leaves it untouched.
+	UpdateUser(id, name string, isActive *bool) (*User, error)
 	UpdateUserRoles(id string, roles []string) (*User, error)
 	GrantPermission(id string, p Permission) (*User, error)
 	DenyPermission(id string, p Permission) (*User, error)

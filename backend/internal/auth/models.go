@@ -11,16 +11,17 @@ import (
 // Sentinel errors returned by the storage implementations (pgstore) and
 // checked by handlers for specific HTTP responses.
 var (
-	ErrSessionNotFound    = errors.New("session not found")
-	ErrUserNotFound       = errors.New("user not found")
-	ErrUserExists         = errors.New("user already exists")
-	ErrUsernameExists     = errors.New("username already exists")
-	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrRoleNotFound       = errors.New("role not found")
-	ErrRoleExists         = errors.New("role already exists")
-	ErrSystemRole         = errors.New("system roles cannot be deleted")
-	ErrRoleInUse          = errors.New("role is assigned to one or more users and cannot be deleted")
-	ErrInvalidPerm        = errors.New("one or more permissions are not valid")
+	ErrSessionNotFound     = errors.New("session not found")
+	ErrUserNotFound        = errors.New("user not found")
+	ErrUserExists          = errors.New("user already exists")
+	ErrUsernameExists      = errors.New("username already exists")
+	ErrInvalidCredentials  = errors.New("invalid credentials")
+	ErrRoleNotFound        = errors.New("role not found")
+	ErrRoleExists          = errors.New("role already exists")
+	ErrSystemRole          = errors.New("system roles cannot be deleted")
+	ErrRoleInUse           = errors.New("role is assigned to one or more users and cannot be deleted")
+	ErrInvalidPerm         = errors.New("one or more permissions are not valid")
+	ErrInvalidOverrideKind = errors.New("kind must be 'grant' or 'deny'")
 )
 
 // DocumentSection represents a section in a generated document.
@@ -86,6 +87,9 @@ func DefaultRoles() []*Role {
 				PermEmbeddedAssistant,
 				PermTemplatesManage,
 				PermCortiSectionsView,
+				PermPatientsManage,
+				PermNHSIntegration,
+				PermAuditView,
 			},
 		},
 		{
@@ -101,6 +105,8 @@ func DefaultRoles() []*Role {
 				PermClinicalFacts,
 				PermDocumentationView,
 				PermEmbeddedAssistant,
+				PermPatientsManage,
+				PermNHSIntegration,
 			},
 		},
 		{
@@ -116,6 +122,8 @@ func DefaultRoles() []*Role {
 				PermClinicalFacts,
 				PermDocumentationView,
 				PermEmbeddedAssistant,
+				PermPatientsManage,
+				PermNHSIntegration,
 			},
 		},
 		{
@@ -232,8 +240,8 @@ type SignupRequest struct {
 
 // LoginResponse represents a successful login response.
 type LoginResponse struct {
-	Success bool   `json:"success"`
-	Token   string `json:"token"`
+	Success bool          `json:"success"`
+	Token   string        `json:"token"`
 	User    *UserResponse `json:"user"`
 }
 
@@ -265,10 +273,10 @@ type UserResponse struct {
 
 // PermissionBreakdown is returned by GET /api/users/:id/permissions.
 type PermissionBreakdown struct {
-	Effective  []Permission `json:"effective"`
-	FromRoles  []Permission `json:"from_roles"`
-	Granted    []Permission `json:"granted"`
-	Denied     []Permission `json:"denied"`
+	Effective []Permission `json:"effective"`
+	FromRoles []Permission `json:"from_roles"`
+	Granted   []Permission `json:"granted"`
+	Denied    []Permission `json:"denied"`
 }
 
 // NewUser creates a new user with a generated (UUID) ID, status "approved"

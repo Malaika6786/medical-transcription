@@ -15,6 +15,11 @@ const (
 	PermEmbeddedAssistant Permission = "embedded_assistant.access"
 	PermTemplatesManage   Permission = "templates.manage"
 	PermCortiSectionsView Permission = "corti_sections.view"
+
+	// NHS/SystmOne integration permissions (SYSTMONE_INTEGRATION_REPORT.md).
+	PermPatientsManage Permission = "patients.manage" // create/view/edit structured (NHS-number-based) patient records
+	PermNHSIntegration Permission = "nhs.integration" // PDS lookup + GP Connect: Send Document
+	PermAuditView      Permission = "audit.view"      // read the clinical audit trail
 )
 
 // AllPermissions is the complete list of permissions defined in the system.
@@ -29,6 +34,9 @@ var AllPermissions = []Permission{
 	PermEmbeddedAssistant,
 	PermTemplatesManage,
 	PermCortiSectionsView,
+	PermPatientsManage,
+	PermNHSIntegration,
+	PermAuditView,
 }
 
 // ValidatePermissions rejects any permission not in AllPermissions.

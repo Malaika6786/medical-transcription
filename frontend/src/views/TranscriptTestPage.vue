@@ -307,13 +307,21 @@ const generateDocument = async () => {
 
 const formatSectionContent = (content: string): string => {
   if (!content) return ''
-  
+
+  // Escape HTML first — content can contain arbitrary transcript/document
+  // text, so this must never be trusted as markup (this is rendered via
+  // v-html below).
+  let formatted = content
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+
   // Convert markdown-style bold to HTML
-  let formatted = content.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-  
+  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+
   // Convert newlines to <br>
   formatted = formatted.replace(/\n/g, '<br>')
-  
+
   return formatted
 }
 

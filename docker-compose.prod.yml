@@ -1,0 +1,79 @@
+# Production stack — added per SYSTMONE_INTEGRATION_REPORT.md, "No
+# production IaC/container setup found". This is the piece that was
+# missing between "go run ./cmd/server" on a developer machine and an
+# actual auditable, TLS-terminated deployment a DTAC Technical Security
+# review could point to.
+#
+# Usage:
+#   cp backend/.env.example backend/.env.prod   # fill in real values —
+#                                                # see that file's comments,
+#                                                # especially FIELD_ENCRYPTION_KEY
+#                                                # and the UK/EU data-residency ones
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# TLS: Caddy automatically obtains and renews a Let's Encrypt certificate
+# for DOMAIN_NAME — set that env var before first run. For an internal/NHS
+# network deployment behind an existing reverse proxy or HSCN gateway,
+# replace the caddy service with that infrastructure instead; the
+# frontend/backend services underneath are unaffected either way.
+
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: meditrans
+      POSTGRES_USER: meditrans
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U meditrans"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env.prod
+    environment:
+      DATABASE_URL: postgres://meditrans:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/meditrans?sslmode=disable
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: "8090"
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "8090"
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    expose:
+      - "80"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN_NAME: ${DOMAIN_NAME:?set DOMAIN_NAME in .env, e.g. app.example.nhs.uk}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

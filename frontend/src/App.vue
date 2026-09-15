@@ -85,6 +85,7 @@
       <!-- Mobile hamburger menu -->
       <v-app-bar-nav-icon
         v-if="isMobile"
+        aria-label="Open navigation menu"
         @click="drawer = !drawer"
       />
 
@@ -133,6 +134,7 @@
           icon
           variant="text"
           class="theme-btn"
+          :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
           @click="toggleTheme"
           data-tour="theme-toggle"
         >
@@ -207,6 +209,8 @@
       <!-- Login page takes full screen -->
       <router-view v-else />
     </v-main>
+
+    <ToastHost />
   </v-app>
 </template>
 
@@ -221,6 +225,7 @@ import {
   logout,
   hasPermission
 } from '@/stores/auth'
+import ToastHost from '@/components/ToastHost.vue'
 
 const theme = useTheme()
 const router = useRouter()
@@ -359,6 +364,8 @@ const superUserNavItems: NavItem[] = [
   { title: 'Pending Approvals', path: '/pending-users',  icon: 'mdi-account-clock',          permission: null },
   { title: 'User Management',   path: '/users',          icon: 'mdi-account-group',          permission: null },
   { title: 'Role Management',   path: '/roles',          icon: 'mdi-shield-key',              permission: null },
+  { title: 'NHS Patients',      path: '/patients',       icon: 'mdi-badge-account-horizontal-outline', permission: null },
+  { title: 'Audit Log',         path: '/audit-log',      icon: 'mdi-shield-search-outline',  permission: null },
   { title: 'Clinician Tools',   path: '/my-dashboard',   icon: 'mdi-stethoscope',             permission: null },
 ]
 
@@ -375,6 +382,7 @@ const standardNavItems: NavItem[] = [
   { title: 'Ambient AI',         path: '/ambient-session',    icon: 'mdi-broadcast',                  permission: 'ambient.access', tourId: 'nav-ambient' },
   { title: 'Dictation',          path: '/dictation',          icon: 'mdi-microphone-message',         permission: 'dictation.access' },
   { title: 'Embedded Assistant', path: '/embedded-assistant', icon: 'mdi-robot-outline',              permission: 'embedded_assistant.access' },
+  { title: 'NHS Patients',       path: '/patients',           icon: 'mdi-badge-account-horizontal-outline', permission: 'patients.manage' },
   { title: 'Saved Sessions',     path: '/saved-sessions',     icon: 'mdi-content-save-all',           permission: null, tourId: 'nav-saved-sessions' },
   { title: 'Semantic Search',    path: '/search',             icon: 'mdi-text-search',                permission: null },
   { title: 'Docs',               path: '/docs',               icon: 'mdi-book-open-page-variant',     permission: 'documentation.view' },
